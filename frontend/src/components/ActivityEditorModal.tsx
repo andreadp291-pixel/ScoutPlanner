@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { CATEGORIES, colorForCategory } from './calendar/categories'
 import type { Activity, ActivityInput } from '../api/activities'
+
+const DEFAULT_COLOR = '#3b82f6'
 
 interface ActivityEditorModalProps {
   date: string // 'YYYY-MM-DD' del giorno su cui si sta operando
@@ -10,6 +11,7 @@ interface ActivityEditorModalProps {
   canDelete: boolean
   onSave: (input: ActivityInput) => void
   onDelete?: () => void
+  onDuplicate?: () => void
   onClose: () => void
 }
 
@@ -20,12 +22,13 @@ export function ActivityEditorModal({
   canDelete,
   onSave,
   onDelete,
+  onDuplicate,
   onClose,
 }: ActivityEditorModalProps) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [location, setLocation] = useState(initial?.location ?? '')
-  const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0].value)
+  const [color, setColor] = useState(initial?.color ?? DEFAULT_COLOR)
   const [startTime, setStartTime] = useState((initial?.start_at ?? defaultStartAt ?? '').slice(11, 16))
   const [endTime, setEndTime] = useState((initial?.end_at ?? defaultEndAt ?? '').slice(11, 16))
 
@@ -37,8 +40,8 @@ export function ActivityEditorModal({
       title,
       description,
       location,
-      category,
-      color: colorForCategory(category),
+      category: 'attivita',
+      color,
       start_at: `${datePart}T${startTime}`,
       end_at: `${datePart}T${endTime}`,
     })
@@ -62,14 +65,13 @@ export function ActivityEditorModal({
             <input value={location} onChange={(e) => setLocation(e.target.value)} />
           </label>
           <label>
-            Categoria
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+            Colore
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="color-input"
+            />
           </label>
           <div className="time-range">
             <label>
@@ -97,6 +99,11 @@ export function ActivityEditorModal({
             {initial && canDelete && onDelete && (
               <button type="button" className="danger" onClick={onDelete}>
                 Elimina
+              </button>
+            )}
+            {initial && canDelete && onDuplicate && (
+              <button type="button" onClick={onDuplicate}>
+                Duplica
               </button>
             )}
             <button type="button" onClick={onClose}>

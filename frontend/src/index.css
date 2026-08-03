@@ -226,6 +226,12 @@ form textarea {
   flex: 1;
 }
 
+.color-input {
+  padding: 3px !important;
+  height: 38px;
+  cursor: pointer;
+}
+
 /* --- buttons --- */
 button {
   font: inherit;
