@@ -34,3 +34,13 @@ export function formatDayLabel(date: string): string {
   const label = DAY_LABEL_FORMATTER.format(new Date(`${date}T00:00:00`))
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
+
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('it-IT', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+export function formatShortDate(date: string): string {
+  return SHORT_DATE_FORMATTER.format(new Date(`${date}T00:00:00`))
+}

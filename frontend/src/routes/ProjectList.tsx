@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { listProjects } from '../api/projects'
+import { formatShortDate } from '../components/calendar/time'
 import { Spinner } from '../components/Spinner'
 
 export function ProjectList() {
@@ -23,7 +24,7 @@ export function ProjectList() {
             <Link to={`/projects/${p.id}`}>
               {p.name}
               <div className="dates">
-                {p.start_date} → {p.end_date}
+                {formatShortDate(p.start_date)} → {formatShortDate(p.end_date)}
               </div>
             </Link>
           </li>

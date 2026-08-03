@@ -13,7 +13,8 @@ import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
-import { toIsoDatetime } from '../components/calendar/time'
+import { formatShortDate, toIsoDatetime } from '../components/calendar/time'
+import { ShareIcon } from '../components/icons/ShareIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
@@ -105,16 +106,22 @@ export function ProjectCalendar() {
 
   return (
     <div>
-      <h1>{project.name}</h1>
-      <p>
-        {project.start_date} → {project.end_date}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div>
+          <h1 style={{ marginBottom: 4 }}>{project.name}</h1>
+          <p className="muted">
+            {formatShortDate(project.start_date)} → {formatShortDate(project.end_date)}
+          </p>
+        </div>
         {isOwner && (
-          <>
-            {' · '}
-            <Link to={`/projects/${id}/tokens`}>Gestisci persone</Link>
-          </>
+          <Link to={`/projects/${id}/tokens`}>
+            <button type="button" className="primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <ShareIcon />
+              Gestisci persone
+            </button>
+          </Link>
         )}
-      </p>
+      </div>
       <div className="calendar-scroll" style={{ display: 'flex' }}>
         <TimeAxis />
         {days.map((date) => (
