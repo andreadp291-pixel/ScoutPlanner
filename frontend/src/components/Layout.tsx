@@ -33,6 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {!ownerEmail && memberName && (
           <nav>
             <Link to="/me/projects">I miei progetti</Link>
+            <Link to="/member/change-password">Cambia password</Link>
             <span className="muted">{memberName}</span>
             <button type="button" className="link-button" onClick={handleLogout}>
               Esci

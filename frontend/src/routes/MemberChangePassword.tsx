@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { memberChangePassword } from '../api/auth'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 
@@ -29,9 +29,9 @@ export function MemberChangePassword() {
 
   return (
     <div>
-      <h1>Imposta una password personale</h1>
+      <h1>Cambia password</h1>
       <p className="muted" style={{ marginBottom: 24 }}>
-        Ciao {displayName}, per continuare imposta una password personale (minimo 10 caratteri).
+        Ciao {displayName}, scegli una nuova password personale (minimo 10 caratteri).
       </p>
       <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 380 }}>
         <label>
@@ -63,6 +63,9 @@ export function MemberChangePassword() {
           </p>
         )}
       </form>
+      <p className="muted" style={{ marginTop: 16 }}>
+        <Link to="/me/projects">← Torna ai progetti</Link>
+      </p>
     </div>
   )
 }
