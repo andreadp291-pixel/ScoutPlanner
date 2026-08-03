@@ -17,9 +17,10 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 
 ## systemd unit
 
-Crea `/etc/systemd/system/scoutplanner.service`:
+Crea `/etc/systemd/system/scoutplanner.service` con questo comando (heredoc, evita errori di copia-incolla in editor):
 
-```ini
+```bash
+sudo tee /etc/systemd/system/scoutplanner.service > /dev/null <<'EOF'
 [Unit]
 Description=ScoutPlanner API
 After=network.target
@@ -34,6 +35,7 @@ Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
+EOF
 ```
 
 ```bash
@@ -50,10 +52,16 @@ Aggiungi il nuovo path `/scoutplanner` alla configurazione Funnel esistente (sen
 sudo tailscale serve --bg --set-path /scoutplanner http://127.0.0.1:8093
 ```
 
+> ⚠️ **Attenzione**: questo comando (`tailscale serve --set-path`, senza `funnel`) può disattivare silenziosamente il flag `AllowFunnel` (accesso pubblico da internet) sulla porta 443, riportando `/` e `/segnalazioni` a "solo tailnet". Verifica sempre con `tailscale serve status --json` che `AllowFunnel` sia `true` per la porta 443 dopo ogni modifica. Se è sparito, ripristinalo con:
+> ```bash
+> sudo tailscale funnel --bg --set-path / http://127.0.0.1:8000
+> ```
+> (riabilita il Funnel pubblico senza rimuovere gli altri path già mappati).
+
 Verifica con:
 
 ```bash
-tailscale serve status
+tailscale serve status --json   # controlla AllowFunnel per ogni porta
 curl https://andrea.tail04be23.ts.net/scoutplanner/health
 ```
 
