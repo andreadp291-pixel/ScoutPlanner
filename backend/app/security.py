@@ -26,16 +26,18 @@ def verify_magic_link_token(token: str, max_age: int) -> str | None:
     return data["email"]
 
 
-def create_owner_session_token(email: str) -> str:
-    return _owner_session_serializer.dumps({"email": email})
+def create_owner_session_token(email: str, token_version: int = 0) -> str:
+    return _owner_session_serializer.dumps({"email": email, "tv": token_version})
 
 
-def verify_owner_session_token(token: str, max_age: int) -> str | None:
+def verify_owner_session_token(token: str, max_age: int) -> dict | None:
     try:
         data = _owner_session_serializer.loads(token, max_age=max_age)
     except (BadSignature, SignatureExpired):
         return None
-    return data["email"]
+    # Sessioni emesse prima dell'introduzione della password non hanno "tv": trattale come versione 0.
+    data.setdefault("tv", 0)
+    return data
 
 
 def create_member_session_token(member_id: int, token_version: int) -> str:

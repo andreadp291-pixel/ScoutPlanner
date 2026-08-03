@@ -23,11 +23,21 @@ def get_bearer_token(request: Request) -> str:
     return header[len("Bearer "):]
 
 
+def _owner_token_version_matches(conn, email: str, tv: int) -> bool:
+    row = conn.execute("SELECT token_version FROM owners WHERE email = ?", (email,)).fetchone()
+    # Nessuna riga owners = owner che non ha mai impostato una password: versione implicita 0.
+    expected = row["token_version"] if row is not None else 0
+    return expected == tv
+
+
 def require_owner_session(token: str = Depends(get_bearer_token)) -> str:
-    email = verify_owner_session_token(token, max_age=OWNER_SESSION_MAX_AGE)
-    if email is None:
+    data = verify_owner_session_token(token, max_age=OWNER_SESSION_MAX_AGE)
+    if data is None:
         raise HTTPException(status_code=401, detail="Sessione non valida o scaduta")
-    return email
+    with get_conn() as conn:
+        if not _owner_token_version_matches(conn, data["email"], data["tv"]):
+            raise HTTPException(status_code=401, detail="Sessione non più valida, effettua di nuovo il login")
+    return data["email"]
 
 
 def require_member_session(token: str = Depends(get_bearer_token)) -> dict:
@@ -58,11 +68,13 @@ def require_project_role(min_role: str):
             if project is None:
                 raise HTTPException(status_code=404, detail="Progetto non trovato")
 
-            email = verify_owner_session_token(token, max_age=OWNER_SESSION_MAX_AGE)
-            if email is not None:
-                if email != project["owner_email"]:
+            owner_data = verify_owner_session_token(token, max_age=OWNER_SESSION_MAX_AGE)
+            if owner_data is not None:
+                if not _owner_token_version_matches(conn, owner_data["email"], owner_data["tv"]):
+                    raise HTTPException(status_code=401, detail="Sessione non più valida, effettua di nuovo il login")
+                if owner_data["email"] != project["owner_email"]:
                     raise HTTPException(status_code=403, detail="Non sei l'owner di questo progetto")
-                actor = Actor(role="owner", name=email, project_id=project_id)
+                actor = Actor(role="owner", name=owner_data["email"], project_id=project_id)
             else:
                 member_data = verify_member_session_token(token, max_age=MEMBER_SESSION_MAX_AGE)
                 if member_data is not None:

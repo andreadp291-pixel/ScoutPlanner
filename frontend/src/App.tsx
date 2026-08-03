@@ -8,6 +8,8 @@ import { Home } from './routes/Home'
 import { MemberChangePassword } from './routes/MemberChangePassword'
 import { MemberLogin } from './routes/MemberLogin'
 import { MemberProjectList } from './routes/MemberProjectList'
+import { OwnerLogin } from './routes/OwnerLogin'
+import { OwnerSetPassword } from './routes/OwnerSetPassword'
 import { ProjectCalendar } from './routes/ProjectCalendar'
 import { ProjectCreate } from './routes/ProjectCreate'
 import { ProjectList } from './routes/ProjectList'
@@ -59,6 +61,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/login" element={<MemberLogin />} />
+              <Route path="/login/owner" element={<OwnerLogin />} />
               <Route
                 path="/member/change-password"
                 element={
@@ -73,6 +76,14 @@ function App() {
                   <RequireMemberSession>
                     <MemberProjectList />
                   </RequireMemberSession>
+                }
+              />
+              <Route
+                path="/owner/set-password"
+                element={
+                  <RequireOwnerSession>
+                    <OwnerSetPassword />
+                  </RequireOwnerSession>
                 }
               />
               <Route

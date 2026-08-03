@@ -5,6 +5,20 @@ class RequestLinkIn(BaseModel):
     email: EmailStr
 
 
+class OwnerSessionOut(BaseModel):
+    session_token: str
+    email: str
+
+
+class OwnerSetPasswordIn(BaseModel):
+    new_password: str = Field(min_length=10)
+
+
+class OwnerLoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class ProjectCreateIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     start_date: str  # 'YYYY-MM-DD'

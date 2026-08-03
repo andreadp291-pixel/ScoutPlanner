@@ -64,6 +64,15 @@ CREATE TABLE IF NOT EXISTS project_members (
 );
 CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_members_member ON project_members(member_id);
+
+-- Password opzionale per gli owner: il magic link resta sempre disponibile,
+-- la password è un'alternativa più comoda una volta impostata dall'owner stesso.
+CREATE TABLE IF NOT EXISTS owners (
+    email          TEXT PRIMARY KEY,
+    password_hash  TEXT,
+    token_version  INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.

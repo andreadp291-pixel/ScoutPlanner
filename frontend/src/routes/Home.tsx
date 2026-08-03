@@ -54,7 +54,10 @@ export function Home() {
         )}
       </form>
       <p className="muted" style={{ marginTop: 16 }}>
-        Sei stato invitato a un progetto via email? <Link to="/login">Accedi con email e password</Link>
+        Hai già impostato una password? <Link to="/login/owner">Accedi con email e password</Link>
+      </p>
+      <p className="muted" style={{ marginTop: 4 }}>
+        Sei stato invitato a un progetto via email? <Link to="/login">Accedi come collaboratore</Link>
       </p>
     </div>
   )

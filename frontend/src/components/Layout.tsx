@@ -19,7 +19,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <AccountMenu
             label={ownerEmail}
             initial={ownerEmail.charAt(0).toUpperCase()}
-            items={[{ to: '/projects', label: 'I miei progetti' }]}
+            items={[
+              { to: '/projects', label: 'I miei progetti' },
+              { to: '/owner/set-password', label: 'Imposta password' },
+            ]}
             onLogout={() => {
               ownerLogout()
               memberLogout()

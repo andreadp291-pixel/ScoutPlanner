@@ -5,9 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from ..config import FRONTEND_BASE_URL, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, MAGIC_LINK_MAX_AGE
 from ..db import get_conn
-from ..deps import require_member_session
+from ..deps import require_member_session, require_owner_session
 from ..mail import send_magic_link_email
-from ..schemas import MemberChangePasswordIn, MemberLoginIn, MemberSessionOut, RequestLinkIn
+from ..schemas import (
+    MemberChangePasswordIn,
+    MemberLoginIn,
+    MemberSessionOut,
+    OwnerLoginIn,
+    OwnerSessionOut,
+    OwnerSetPasswordIn,
+    RequestLinkIn,
+)
 from ..security import (
     create_magic_link_token,
     create_member_session_token,
@@ -32,7 +40,10 @@ async def verify(token: str = Query(...)):
     email = verify_magic_link_token(token, max_age=MAGIC_LINK_MAX_AGE)
     if email is None:
         raise HTTPException(status_code=401, detail="Link non valido o scaduto")
-    session_token = create_owner_session_token(email)
+    with get_conn() as conn:
+        conn.execute("INSERT OR IGNORE INTO owners (email) VALUES (?)", (email,))
+        row = conn.execute("SELECT token_version FROM owners WHERE email = ?", (email,)).fetchone()
+    session_token = create_owner_session_token(email, row["token_version"])
     return {"session_token": session_token, "email": email}
 
 
@@ -102,3 +113,45 @@ async def member_change_password(body: MemberChangePasswordIn, member: dict = De
     # (le altre sessioni aperte altrove restano invalidate dal token_version).
     session_token = create_member_session_token(member["id"], row["token_version"])
     return {"session_token": session_token, "display_name": row["display_name"], "must_change_password": False}
+
+
+@router.post("/owner/set-password", response_model=OwnerSessionOut)
+async def owner_set_password(body: OwnerSetPasswordIn, email: str = Depends(require_owner_session)):
+    new_hash = ph.hash(body.new_password)
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO owners (email, password_hash, token_version) VALUES (?, ?, 1)
+               ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash,
+                                                 token_version = owners.token_version + 1""",
+            (email, new_hash),
+        )
+        row = conn.execute("SELECT token_version FROM owners WHERE email = ?", (email,)).fetchone()
+
+    # Riemette subito un token nuovo per la sessione corrente (le altre sessioni
+    # aperte altrove restano invalidate dal token_version, come per i membri).
+    session_token = create_owner_session_token(email, row["token_version"])
+    return {"session_token": session_token, "email": email}
+
+
+@router.post("/owner/login", response_model=OwnerSessionOut)
+async def owner_login(body: OwnerLoginIn, request: Request):
+    _check_rate_limit(request, body.email)
+    _record_login_attempt(request, body.email)
+
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT password_hash, token_version FROM owners WHERE email = ?", (body.email,)
+        ).fetchone()
+
+    if row is None or row["password_hash"] is None:
+        raise HTTPException(
+            status_code=401, detail="Password non impostata per questo account: usa il magic link"
+        )
+
+    try:
+        ph.verify(row["password_hash"], body.password)
+    except (VerifyMismatchError, InvalidHashError):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+
+    session_token = create_owner_session_token(body.email, row["token_version"])
+    return {"session_token": session_token, "email": body.email}

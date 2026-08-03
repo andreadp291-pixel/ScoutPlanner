@@ -27,3 +27,19 @@ export function memberChangePassword(newPassword: string) {
     useMemberSession: true,
   })
 }
+
+export interface OwnerSession {
+  session_token: string
+  email: string
+}
+
+export function ownerLogin(email: string, password: string) {
+  return apiFetch<OwnerSession>('/auth/owner/login', { method: 'POST', body: { email, password } })
+}
+
+export function ownerSetPassword(newPassword: string) {
+  return apiFetch<OwnerSession>('/auth/owner/set-password', {
+    method: 'POST',
+    body: { new_password: newPassword },
+  })
+}
