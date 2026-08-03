@@ -13,7 +13,7 @@ import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
-import { formatShortDate, toIsoDatetime } from '../components/calendar/time'
+import { formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
 import { ShareIcon } from '../components/icons/ShareIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
@@ -78,7 +78,7 @@ export function ProjectCalendar() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ activityId, input }: { activityId: number; input: ActivityInput }) =>
+    mutationFn: ({ activityId, input }: { activityId: number; input: Partial<ActivityInput> }) =>
       updateActivity(id, activityId, input),
     onSuccess: () => {
       invalidateActivities()
@@ -86,6 +86,16 @@ export function ProjectCalendar() {
     },
     onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
   })
+
+  const moveMutation = useMutation({
+    mutationFn: ({ activityId, input }: { activityId: number; input: Partial<ActivityInput> }) =>
+      updateActivity(id, activityId, input),
+    onSuccess: invalidateActivities,
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante lo spostamento'),
+  })
+  // Nota: mutazione separata da updateMutation perché quest'ultima resetta editorState
+  // al successo (adatto quando il modal è aperto), mentre move/resize avvengono col
+  // modal chiuso e non devono toccare editorState.
 
   const deleteMutation = useMutation({
     mutationFn: (activityId: number) => deleteActivity(id, activityId),
@@ -139,6 +149,24 @@ export function ProjectCalendar() {
               })
             }
             onRequestEdit={(activity) => setEditorState({ mode: 'edit', activity })}
+            onRequestMove={(activity, newStartMinutes) => {
+              const activityDate = activity.start_at.slice(0, 10)
+              const duration = minutesSinceMidnight(activity.end_at) - minutesSinceMidnight(activity.start_at)
+              moveMutation.mutate({
+                activityId: activity.id,
+                input: {
+                  start_at: toIsoDatetime(activityDate, newStartMinutes),
+                  end_at: toIsoDatetime(activityDate, newStartMinutes + duration),
+                },
+              })
+            }}
+            onRequestResize={(activity, newEndMinutes) => {
+              const activityDate = activity.start_at.slice(0, 10)
+              moveMutation.mutate({
+                activityId: activity.id,
+                input: { end_at: toIsoDatetime(activityDate, newEndMinutes) },
+              })
+            }}
           />
         ))}
       </div>

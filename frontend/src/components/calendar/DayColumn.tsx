@@ -9,11 +9,21 @@ interface DayColumnProps {
   canEdit: boolean
   onRequestCreate: (date: string, startMinutes: number, endMinutes: number) => void
   onRequestEdit: (activity: Activity) => void
+  onRequestMove: (activity: Activity, newStartMinutes: number) => void
+  onRequestResize: (activity: Activity, newEndMinutes: number) => void
 }
 
 const DEFAULT_DURATION_MINUTES = 30
 
-export function DayColumn({ date, activities, canEdit, onRequestCreate, onRequestEdit }: DayColumnProps) {
+export function DayColumn({
+  date,
+  activities,
+  canEdit,
+  onRequestCreate,
+  onRequestEdit,
+  onRequestMove,
+  onRequestResize,
+}: DayColumnProps) {
   const trackRef = useRef<HTMLDivElement>(null)
   const [dragPreview, setDragPreview] = useState<{ start: number; end: number } | null>(null)
   const dragOrigin = useRef<number | null>(null)
@@ -86,7 +96,10 @@ export function DayColumn({ date, activities, canEdit, onRequestCreate, onReques
             activity={activity}
             dayStartMinutes={DAY_START_MINUTES}
             pxPerMinute={PX_PER_MINUTE}
+            canEdit={canEdit}
             onClick={() => onRequestEdit(activity)}
+            onMove={(newStart) => onRequestMove(activity, newStart)}
+            onResize={(newEnd) => onRequestResize(activity, newEnd)}
           />
         ))}
         {dragPreview && (

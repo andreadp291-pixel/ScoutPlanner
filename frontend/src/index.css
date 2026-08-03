@@ -506,12 +506,25 @@ code {
   transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease),
     filter var(--duration-fast) var(--ease);
   animation: riseIn var(--duration-fast) var(--ease);
+  touch-action: none;
 }
 .activity-block:hover {
   transform: scale(1.02);
   box-shadow: var(--shadow-md);
   filter: brightness(1.08);
   z-index: 5;
+}
+.activity-block:active {
+  cursor: grabbing;
+}
+.activity-resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  touch-action: none;
 }
 
 .time-axis-wrapper {
