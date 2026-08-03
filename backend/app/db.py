@@ -1,0 +1,61 @@
+import sqlite3
+from contextlib import contextmanager
+
+from .config import DB_PATH
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS projects (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL,
+    owner_email   TEXT NOT NULL,
+    start_date    TEXT NOT NULL,
+    end_date      TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_projects_owner_email ON projects(owner_email);
+
+CREATE TABLE IF NOT EXISTS activities (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title         TEXT NOT NULL,
+    description   TEXT NOT NULL DEFAULT '',
+    location      TEXT NOT NULL DEFAULT '',
+    category      TEXT NOT NULL,
+    color         TEXT NOT NULL,
+    start_at      TEXT NOT NULL,
+    end_at        TEXT NOT NULL,
+    created_by    TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_activities_project_id ON activities(project_id);
+
+CREATE TABLE IF NOT EXISTS project_tokens (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    token_hash    TEXT NOT NULL UNIQUE,
+    person_name   TEXT NOT NULL,
+    role          TEXT NOT NULL CHECK (role IN ('editor','viewer')),
+    revoked_at    TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_project_tokens_project_id ON project_tokens(project_id);
+"""
+
+
+def init_db() -> None:
+    with get_conn() as conn:
+        conn.executescript(SCHEMA)
+
+
+@contextmanager
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()

@@ -1,0 +1,58 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { useAuthStore } from './state/authStore'
+import { AuthCallback } from './routes/AuthCallback'
+import { Home } from './routes/Home'
+import { ProjectCalendar } from './routes/ProjectCalendar'
+import { ProjectCreate } from './routes/ProjectCreate'
+import { ProjectList } from './routes/ProjectList'
+import { ProjectTokens } from './routes/ProjectTokens'
+
+const queryClient = new QueryClient()
+
+function RequireOwnerSession({ children }: { children: React.ReactNode }) {
+  const sessionToken = useAuthStore((s) => s.sessionToken)
+  if (!sessionToken) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/projects"
+            element={
+              <RequireOwnerSession>
+                <ProjectList />
+              </RequireOwnerSession>
+            }
+          />
+          <Route
+            path="/projects/new"
+            element={
+              <RequireOwnerSession>
+                <ProjectCreate />
+              </RequireOwnerSession>
+            }
+          />
+          {/* Il calendario è raggiungibile sia dall'owner sia da chi ha un token di condivisione (?t=...) */}
+          <Route path="/projects/:projectId" element={<ProjectCalendar />} />
+          <Route
+            path="/projects/:projectId/tokens"
+            element={
+              <RequireOwnerSession>
+                <ProjectTokens />
+              </RequireOwnerSession>
+            }
+          />
+        </Routes>
+      </HashRouter>
+    </QueryClientProvider>
+  )
+}
+
+export default App
