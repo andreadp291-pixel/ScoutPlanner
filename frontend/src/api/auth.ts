@@ -9,3 +9,21 @@ export function verifyLink(token: string) {
     `/auth/verify?token=${encodeURIComponent(token)}`,
   )
 }
+
+export interface MemberSession {
+  session_token: string
+  display_name: string
+  must_change_password: boolean
+}
+
+export function memberLogin(email: string, password: string) {
+  return apiFetch<MemberSession>('/auth/member/login', { method: 'POST', body: { email, password } })
+}
+
+export function memberChangePassword(newPassword: string) {
+  return apiFetch<MemberSession>('/auth/member/change-password', {
+    method: 'POST',
+    body: { new_password: newPassword },
+    useMemberSession: true,
+  })
+}

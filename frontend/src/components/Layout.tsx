@@ -1,9 +1,19 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../state/authStore'
+import { useMemberAuthStore } from '../state/memberAuthStore'
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const email = useAuthStore((s) => s.email)
-  const logout = useAuthStore((s) => s.logout)
+  const navigate = useNavigate()
+  const ownerEmail = useAuthStore((s) => s.email)
+  const ownerLogout = useAuthStore((s) => s.logout)
+  const memberName = useMemberAuthStore((s) => s.displayName)
+  const memberLogout = useMemberAuthStore((s) => s.logout)
+
+  function handleLogout() {
+    ownerLogout()
+    memberLogout()
+    navigate('/', { replace: true })
+  }
 
   return (
     <div className="app-shell">
@@ -11,11 +21,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Link to="/" className="brand">
           🏕️ ScoutPlanner
         </Link>
-        {email && (
+        {ownerEmail && (
           <nav>
             <Link to="/projects">I miei progetti</Link>
-            <span className="muted">{email}</span>
-            <button type="button" className="link-button" onClick={logout}>
+            <span className="muted">{ownerEmail}</span>
+            <button type="button" className="link-button" onClick={handleLogout}>
+              Esci
+            </button>
+          </nav>
+        )}
+        {!ownerEmail && memberName && (
+          <nav>
+            <Link to="/me/projects">I miei progetti</Link>
+            <span className="muted">{memberName}</span>
+            <button type="button" className="link-button" onClick={handleLogout}>
               Esci
             </button>
           </nav>

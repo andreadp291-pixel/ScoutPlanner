@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { requestLink } from '../api/auth'
 
 export function Home() {
@@ -52,6 +53,9 @@ export function Home() {
           </p>
         )}
       </form>
+      <p className="muted" style={{ marginTop: 16 }}>
+        Sei stato invitato a un progetto via email? <Link to="/login">Accedi con email e password</Link>
+      </p>
     </div>
   )
 }

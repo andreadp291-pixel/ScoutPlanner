@@ -23,3 +23,14 @@ export function minutesToHHMM(minutes: number): string {
 export function toIsoDatetime(date: string, minutes: number): string {
   return `${date}T${minutesToHHMM(clampMinutes(minutes))}`
 }
+
+const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat('it-IT', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
+
+export function formatDayLabel(date: string): string {
+  const label = DAY_LABEL_FORMATTER.format(new Date(`${date}T00:00:00`))
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}

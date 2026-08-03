@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import FRONTEND_ORIGIN
 from .db import init_db
-from .routers import activities, auth, projects, tokens
+from .routers import activities, auth, me, members, projects, tokens
 
 app = FastAPI(title="ScoutPlanner API")
 
@@ -18,6 +18,8 @@ app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(activities.router)
 app.include_router(tokens.router)
+app.include_router(members.router)
+app.include_router(me.router)
 
 
 @app.on_event("startup")

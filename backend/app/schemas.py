@@ -63,14 +63,12 @@ class ActivityOut(BaseModel):
 
 class TokenCreateIn(BaseModel):
     person_name: str = Field(min_length=1, max_length=100)
-    email: EmailStr | None = None
     role: str = Field(pattern="^(editor|viewer)$")
 
 
 class TokenOut(BaseModel):
     id: int
     person_name: str
-    email: str | None
     role: str
     revoked_at: str | None
     created_at: str
@@ -79,4 +77,45 @@ class TokenOut(BaseModel):
 
 class TokenCreatedOut(TokenOut):
     raw_token: str
-    email_sent: bool
+
+
+class MemberInviteIn(BaseModel):
+    person_name: str = Field(min_length=1, max_length=100)
+    email: EmailStr
+    role: str = Field(pattern="^(editor|viewer)$")
+
+
+class MemberRoleUpdateIn(BaseModel):
+    role: str = Field(pattern="^(editor|viewer)$")
+
+
+class MemberOut(BaseModel):
+    id: int  # project_members.id
+    display_name: str
+    email: str
+    role: str
+    must_change_password: bool
+    created_at: str
+
+
+class MemberLoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class MemberSessionOut(BaseModel):
+    session_token: str
+    display_name: str
+    must_change_password: bool
+
+
+class MemberChangePasswordIn(BaseModel):
+    new_password: str = Field(min_length=10)
+
+
+class MemberProjectOut(BaseModel):
+    id: int
+    name: str
+    start_date: str
+    end_date: str
+    role: str

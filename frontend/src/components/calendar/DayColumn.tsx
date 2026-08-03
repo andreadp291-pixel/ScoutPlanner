@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import type { Activity } from '../../api/activities'
 import { ActivityBlock } from './ActivityBlock'
-import { DAY_END_MINUTES, DAY_START_MINUTES, PX_PER_MINUTE, clampMinutes } from './time'
+import { DAY_END_MINUTES, DAY_START_MINUTES, PX_PER_MINUTE, clampMinutes, formatDayLabel } from './time'
 
 interface DayColumnProps {
   date: string // 'YYYY-MM-DD'
@@ -57,7 +57,7 @@ export function DayColumn({ date, activities, canEdit, onRequestCreate, onReques
 
   return (
     <div className="day-column" style={{ width: 220 }}>
-      <div className="day-column-header">{date}</div>
+      <div className="day-column-header">{formatDayLabel(date)}</div>
       <div
         ref={trackRef}
         className="day-column-track"

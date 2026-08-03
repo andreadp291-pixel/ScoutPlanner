@@ -42,6 +42,28 @@ CREATE TABLE IF NOT EXISTS project_tokens (
     last_used_at  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_project_tokens_project_id ON project_tokens(project_id);
+
+-- Persone invitate con email: account con password personale (niente link da condividere).
+CREATE TABLE IF NOT EXISTS members (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    email                 TEXT NOT NULL UNIQUE,
+    display_name          TEXT NOT NULL,
+    password_hash         TEXT NOT NULL,
+    must_change_password  INTEGER NOT NULL DEFAULT 1,
+    token_version         INTEGER NOT NULL DEFAULT 0,
+    created_at            TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_members (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    member_id     INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    role          TEXT NOT NULL CHECK (role IN ('editor','viewer')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (project_id, member_id)
+);
+CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_members_member ON project_members(member_id);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.

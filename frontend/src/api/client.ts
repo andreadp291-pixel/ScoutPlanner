@@ -1,4 +1,5 @@
 import { useAuthStore } from '../state/authStore'
+import { useMemberAuthStore } from '../state/memberAuthStore'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
 const API_BASE = import.meta.env.VITE_API_BASE as string
@@ -14,15 +15,32 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: string
   body?: unknown
-  projectId?: number // se presente, usa il token di condivisione per quel progetto invece della sessione owner
+  // Se presente, la richiesta riguarda un progetto specifico: si usa, in ordine,
+  // il token di condivisione anonimo salvato per quel progetto, poi la sessione
+  // membro (email+password), poi la sessione owner (magic link).
+  projectId?: number
+  // Forza l'uso della sessione membro anche per chiamate non legate a un progetto
+  // specifico (es. /me/projects).
+  useMemberSession?: boolean
+}
+
+function resolveToken(options: RequestOptions): string | null {
+  if (options.useMemberSession) {
+    return useMemberAuthStore.getState().sessionToken
+  }
+  if (options.projectId !== undefined) {
+    return (
+      useProjectAccessStore.getState().getToken(options.projectId) ??
+      useMemberAuthStore.getState().sessionToken ??
+      useAuthStore.getState().sessionToken
+    )
+  }
+  return useAuthStore.getState().sessionToken
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, projectId } = options
-
-  const token = projectId
-    ? useProjectAccessStore.getState().getToken(projectId) ?? useAuthStore.getState().sessionToken
-    : useAuthStore.getState().sessionToken
+  const { method = 'GET', body } = options
+  const token = resolveToken(options)
 
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
