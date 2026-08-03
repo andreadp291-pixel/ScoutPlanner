@@ -37,6 +37,11 @@ async def get_project(actor: Actor = Depends(require_project_role("viewer"))):
     return dict(row)
 
 
+@router.get("/{project_id}/access")
+async def get_access(actor: Actor = Depends(require_project_role("viewer"))):
+    return {"role": actor.role, "name": actor.name}
+
+
 @router.patch("/{project_id}", response_model=ProjectOut)
 async def update_project(body: ProjectUpdateIn, actor: Actor = Depends(require_project_role("owner"))):
     fields = body.model_dump(exclude_unset=True)

@@ -20,3 +20,12 @@ export function createProject(input: { name: string; start_date: string; end_dat
 export function getProject(projectId: number) {
   return apiFetch<Project>(`/projects/${projectId}`, { projectId })
 }
+
+export interface ProjectAccess {
+  role: 'owner' | 'editor' | 'viewer'
+  name: string
+}
+
+export function getProjectAccess(projectId: number) {
+  return apiFetch<ProjectAccess>(`/projects/${projectId}/access`, { projectId })
+}

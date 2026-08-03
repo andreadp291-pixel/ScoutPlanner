@@ -1,18 +1,14 @@
 import type { Activity } from '../../api/activities'
-
-function minutesSinceMidnight(isoDatetime: string): number {
-  const timePart = isoDatetime.split('T')[1] ?? '00:00'
-  const [h, m] = timePart.split(':').map(Number)
-  return h * 60 + m
-}
+import { minutesSinceMidnight } from './time'
 
 interface ActivityBlockProps {
   activity: Activity
   dayStartMinutes: number
   pxPerMinute: number
+  onClick: () => void
 }
 
-export function ActivityBlock({ activity, dayStartMinutes, pxPerMinute }: ActivityBlockProps) {
+export function ActivityBlock({ activity, dayStartMinutes, pxPerMinute, onClick }: ActivityBlockProps) {
   const startMinutes = minutesSinceMidnight(activity.start_at)
   const endMinutes = minutesSinceMidnight(activity.end_at)
   const top = (startMinutes - dayStartMinutes) * pxPerMinute
@@ -21,6 +17,11 @@ export function ActivityBlock({ activity, dayStartMinutes, pxPerMinute }: Activi
   return (
     <div
       className="activity-block"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
       style={{
         position: 'absolute',
         top,
@@ -32,6 +33,7 @@ export function ActivityBlock({ activity, dayStartMinutes, pxPerMinute }: Activi
         padding: '2px 4px',
         fontSize: 12,
         overflow: 'hidden',
+        cursor: 'pointer',
       }}
       title={`${activity.title} (${activity.start_at.slice(11)}–${activity.end_at.slice(11)})`}
     >
