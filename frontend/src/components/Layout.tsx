@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../state/authStore'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 import { AccountMenu } from './AccountMenu'
+import { BrandIcon } from './icons/BrandIcon'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const ownerEmail = useAuthStore((s) => s.email)
@@ -13,7 +14,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="brand">
-          🏕️ ScoutPlanner
+          <BrandIcon />
+          ScoutPlanner
         </Link>
         {ownerEmail && (
           <AccountMenu

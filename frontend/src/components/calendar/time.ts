@@ -1,4 +1,4 @@
-export const DAY_START_MINUTES = 6 * 60 // 06:00
+export const DAY_START_MINUTES = 0 // 00:00
 export const DAY_END_MINUTES = 24 * 60 // 24:00
 export const PX_PER_MINUTE = 1.5
 

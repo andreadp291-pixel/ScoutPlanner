@@ -17,12 +17,19 @@ import { toIsoDatetime } from '../components/calendar/time'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
+function toDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function dateRange(start: string, end: string): string[] {
   const dates: string[] = []
   const cursor = new Date(start + 'T00:00:00')
   const last = new Date(end + 'T00:00:00')
   while (cursor <= last) {
-    dates.push(cursor.toISOString().slice(0, 10))
+    dates.push(toDateString(cursor))
     cursor.setDate(cursor.getDate() + 1)
   }
   return dates
