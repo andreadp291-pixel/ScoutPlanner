@@ -7,10 +7,12 @@ interface DayColumnProps {
   date: string // 'YYYY-MM-DD'
   activities: Activity[]
   canEdit: boolean
+  isDropTarget: boolean
   onRequestCreate: (date: string, startMinutes: number, endMinutes: number) => void
   onRequestEdit: (activity: Activity) => void
-  onRequestMove: (activity: Activity, newStartMinutes: number) => void
+  onRequestMove: (activity: Activity, newDate: string, newStartMinutes: number) => void
   onRequestResize: (activity: Activity, newEndMinutes: number) => void
+  onDragHoverDate: (date: string | null) => void
 }
 
 const DEFAULT_DURATION_MINUTES = 30
@@ -19,10 +21,12 @@ export function DayColumn({
   date,
   activities,
   canEdit,
+  isDropTarget,
   onRequestCreate,
   onRequestEdit,
   onRequestMove,
   onRequestResize,
+  onDragHoverDate,
 }: DayColumnProps) {
   const trackRef = useRef<HTMLDivElement>(null)
   const [dragPreview, setDragPreview] = useState<{ start: number; end: number } | null>(null)
@@ -73,7 +77,8 @@ export function DayColumn({
       <div className="day-column-header">{formatDayLabel(date)}</div>
       <div
         ref={trackRef}
-        className="day-column-track"
+        className={`day-column-track${isDropTarget ? ' drop-target' : ''}`}
+        data-date={date}
         style={{
           position: 'relative',
           height: totalMinutes * PX_PER_MINUTE,
@@ -98,8 +103,9 @@ export function DayColumn({
             pxPerMinute={PX_PER_MINUTE}
             canEdit={canEdit}
             onClick={() => onRequestEdit(activity)}
-            onMove={(newStart) => onRequestMove(activity, newStart)}
+            onMove={(newDate, newStart) => onRequestMove(activity, newDate, newStart)}
             onResize={(newEnd) => onRequestResize(activity, newEnd)}
+            onDragHoverDate={onDragHoverDate}
           />
         ))}
         {dragPreview && (

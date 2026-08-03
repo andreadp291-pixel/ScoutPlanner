@@ -48,6 +48,7 @@ export function ProjectCalendar() {
   const setToken = useProjectAccessStore((s) => s.setToken)
   const queryClient = useQueryClient()
   const [editorState, setEditorState] = useState<EditorState>(null)
+  const [dragHoverDate, setDragHoverDate] = useState<string | null>(null)
 
   useEffect(() => {
     const shareToken = searchParams.get('t')
@@ -140,6 +141,8 @@ export function ProjectCalendar() {
             date={date}
             activities={activitiesQuery.data ?? []}
             canEdit={canEdit}
+            isDropTarget={dragHoverDate === date}
+            onDragHoverDate={setDragHoverDate}
             onRequestCreate={(d, startMinutes, endMinutes) =>
               setEditorState({
                 mode: 'create',
@@ -149,14 +152,13 @@ export function ProjectCalendar() {
               })
             }
             onRequestEdit={(activity) => setEditorState({ mode: 'edit', activity })}
-            onRequestMove={(activity, newStartMinutes) => {
-              const activityDate = activity.start_at.slice(0, 10)
+            onRequestMove={(activity, newDate, newStartMinutes) => {
               const duration = minutesSinceMidnight(activity.end_at) - minutesSinceMidnight(activity.start_at)
               moveMutation.mutate({
                 activityId: activity.id,
                 input: {
-                  start_at: toIsoDatetime(activityDate, newStartMinutes),
-                  end_at: toIsoDatetime(activityDate, newStartMinutes + duration),
+                  start_at: toIsoDatetime(newDate, newStartMinutes),
+                  end_at: toIsoDatetime(newDate, newStartMinutes + duration),
                 },
               })
             }}
