@@ -17,7 +17,7 @@ export function MemberLogin() {
     setLoading(true)
     try {
       const res = await memberLogin(email, password)
-      setSession(res.session_token, res.display_name)
+      setSession(res.session_token, res.display_name, res.must_change_password)
       navigate(res.must_change_password ? '/member/change-password' : '/me/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore imprevisto')

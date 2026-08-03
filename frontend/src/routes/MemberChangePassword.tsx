@@ -20,7 +20,7 @@ export function MemberChangePassword() {
     }
     try {
       const res = await memberChangePassword(newPassword)
-      setSession(res.session_token, res.display_name)
+      setSession(res.session_token, res.display_name, res.must_change_password)
       navigate('/me/projects', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore imprevisto')
