@@ -63,12 +63,14 @@ class ActivityOut(BaseModel):
 
 class TokenCreateIn(BaseModel):
     person_name: str = Field(min_length=1, max_length=100)
+    email: EmailStr | None = None
     role: str = Field(pattern="^(editor|viewer)$")
 
 
 class TokenOut(BaseModel):
     id: int
     person_name: str
+    email: str | None
     role: str
     revoked_at: str | None
     created_at: str
@@ -77,3 +79,4 @@ class TokenOut(BaseModel):
 
 class TokenCreatedOut(TokenOut):
     raw_token: str
+    email_sent: bool

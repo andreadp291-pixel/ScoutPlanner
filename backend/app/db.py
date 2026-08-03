@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS project_tokens (
     project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     token_hash    TEXT NOT NULL UNIQUE,
     person_name   TEXT NOT NULL,
+    email         TEXT,
     role          TEXT NOT NULL CHECK (role IN ('editor','viewer')),
     revoked_at    TEXT,
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -43,10 +44,20 @@ CREATE TABLE IF NOT EXISTS project_tokens (
 CREATE INDEX IF NOT EXISTS idx_project_tokens_project_id ON project_tokens(project_id);
 """
 
+# Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.
+MIGRATIONS = [
+    "ALTER TABLE project_tokens ADD COLUMN email TEXT",
+]
+
 
 def init_db() -> None:
     with get_conn() as conn:
         conn.executescript(SCHEMA)
+        for migration in MIGRATIONS:
+            try:
+                conn.execute(migration)
+            except sqlite3.OperationalError:
+                pass  # colonna già presente
 
 
 @contextmanager

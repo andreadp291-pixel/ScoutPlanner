@@ -29,3 +29,29 @@ def send_magic_link_email(to_email: str, link_url: str) -> bool:
     except Exception:
         logger.exception("Invio magic link fallito per %s", to_email)
         return False
+
+
+def send_share_link_email(to_email: str, person_name: str, project_name: str, link_url: str) -> bool:
+    if not (SMTP_USER and SMTP_PASSWORD):
+        logger.info("SMTP non configurato, link di condivisione per %s: %s", to_email, link_url)
+        return False
+
+    msg = EmailMessage()
+    msg["Subject"] = f'Sei stato invitato su "{project_name}" — ScoutPlanner'
+    msg["From"] = SMTP_USER
+    msg["To"] = to_email
+    msg.set_content(
+        f"Ciao {person_name},\n\n"
+        f'{to_email} è stato invitato a collaborare al progetto "{project_name}" su ScoutPlanner.\n\n'
+        f"Apri questo link per accedere:\n{link_url}\n\n"
+        "Conserva questo link: è personale, non condividerlo con altri."
+    )
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
+            smtp.send_message(msg)
+        return True
+    except Exception:
+        logger.exception("Invio link di condivisione fallito per %s", to_email)
+        return False

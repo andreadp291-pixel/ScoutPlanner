@@ -106,7 +106,7 @@ export function ProjectCalendar() {
           </>
         )}
       </p>
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+      <div className="calendar-scroll" style={{ display: 'flex', gap: 8 }}>
         {days.map((date) => (
           <DayColumn
             key={date}

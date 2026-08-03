@@ -23,27 +23,35 @@ export function ProjectCreate() {
   return (
     <div>
       <h1>Nuovo progetto</h1>
-      <form onSubmit={handleSubmit}>
+      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 420 }}>
         <label>
           Nome (es. "Campo estivo 2026")
           <input required value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <label>
-          Data inizio
-          <input
-            type="date"
-            required
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </label>
-        <label>
-          Data fine
-          <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </label>
-        <button type="submit">Crea progetto</button>
+        <div className="form-row">
+          <label>
+            Data inizio
+            <input
+              type="date"
+              required
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </label>
+          <label>
+            Data fine
+            <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </label>
+        </div>
+        <button type="submit" className="primary">
+          Crea progetto
+        </button>
+        {error && (
+          <p role="alert" style={{ color: 'var(--danger)', marginTop: 10 }}>
+            {error}
+          </p>
+        )}
       </form>
-      {error && <p role="alert">{error}</p>}
     </div>
   )
 }
