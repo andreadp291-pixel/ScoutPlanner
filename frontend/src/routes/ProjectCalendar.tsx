@@ -13,7 +13,7 @@ import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
-import { formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
+import { formatShortDate, toIsoDatetime } from '../components/calendar/time'
 import { ShareIcon } from '../components/icons/ShareIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
@@ -149,6 +149,8 @@ export function ProjectCalendar() {
           initial={editorState.mode === 'edit' ? editorState.activity : undefined}
           defaultStartAt={editorState.mode === 'create' ? editorState.startAt : undefined}
           defaultEndAt={editorState.mode === 'create' ? editorState.endAt : undefined}
+          projectStartDate={project.start_date}
+          projectEndDate={project.end_date}
           canDelete={canEdit}
           onSave={(input) => {
             if (editorState.mode === 'create') {
@@ -164,19 +166,16 @@ export function ProjectCalendar() {
           }
           onDuplicate={
             editorState.mode === 'edit'
-              ? () => {
+              ? (startAt, endAt) => {
                   const a = editorState.activity
-                  const date = a.start_at.slice(0, 10)
-                  const duration = minutesSinceMidnight(a.end_at) - minutesSinceMidnight(a.start_at)
-                  const newStart = minutesSinceMidnight(a.end_at)
                   createMutation.mutate({
                     title: a.title,
                     description: a.description,
                     location: a.location,
                     category: a.category,
                     color: a.color,
-                    start_at: toIsoDatetime(date, newStart),
-                    end_at: toIsoDatetime(date, newStart + duration),
+                    start_at: startAt,
+                    end_at: endAt,
                   })
                 }
               : undefined

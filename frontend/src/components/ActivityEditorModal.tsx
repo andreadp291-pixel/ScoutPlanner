@@ -8,10 +8,12 @@ interface ActivityEditorModalProps {
   initial?: Activity // presente = modifica, assente = creazione
   defaultStartAt?: string // ISO datetime usato in creazione
   defaultEndAt?: string
+  projectStartDate: string // 'YYYY-MM-DD', per limitare il picker di duplicazione
+  projectEndDate: string
   canDelete: boolean
   onSave: (input: ActivityInput) => void
   onDelete?: () => void
-  onDuplicate?: () => void
+  onDuplicate?: (startAt: string, endAt: string) => void
   onClose: () => void
 }
 
@@ -19,6 +21,8 @@ export function ActivityEditorModal({
   initial,
   defaultStartAt,
   defaultEndAt,
+  projectStartDate,
+  projectEndDate,
   canDelete,
   onSave,
   onDelete,
@@ -34,6 +38,11 @@ export function ActivityEditorModal({
 
   const datePart = (initial?.start_at ?? defaultStartAt ?? '').slice(0, 10)
 
+  const [showDuplicate, setShowDuplicate] = useState(false)
+  const [dupDate, setDupDate] = useState(datePart)
+  const [dupStart, setDupStart] = useState(startTime)
+  const [dupEnd, setDupEnd] = useState(endTime)
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSave({
@@ -45,6 +54,11 @@ export function ActivityEditorModal({
       start_at: `${datePart}T${startTime}`,
       end_at: `${datePart}T${endTime}`,
     })
+  }
+
+  function handleConfirmDuplicate() {
+    if (!onDuplicate) return
+    onDuplicate(`${dupDate}T${dupStart}`, `${dupDate}T${dupEnd}`)
   }
 
   return (
@@ -95,22 +109,78 @@ export function ActivityEditorModal({
               />
             </label>
           </div>
-          <div className="modal-actions">
-            {initial && canDelete && onDelete && (
-              <button type="button" className="danger" onClick={onDelete}>
-                Elimina
-              </button>
-            )}
-            {initial && canDelete && onDuplicate && (
-              <button type="button" onClick={onDuplicate}>
-                Duplica
-              </button>
-            )}
-            <button type="button" onClick={onClose}>
-              Annulla
-            </button>
-            <button type="submit">Salva</button>
-          </div>
+
+          {showDuplicate && (
+            <div className="duplicate-panel">
+              <p className="muted" style={{ marginBottom: 10 }}>
+                Scegli giorno e orario per la copia
+              </p>
+              <label>
+                Giorno
+                <input
+                  type="date"
+                  required
+                  min={projectStartDate}
+                  max={projectEndDate}
+                  value={dupDate}
+                  onChange={(e) => setDupDate(e.target.value)}
+                />
+              </label>
+              <div className="time-range">
+                <label>
+                  Inizio
+                  <input
+                    type="time"
+                    step={60}
+                    required
+                    value={dupStart}
+                    onChange={(e) => setDupStart(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Fine
+                  <input
+                    type="time"
+                    step={60}
+                    required
+                    value={dupEnd}
+                    onChange={(e) => setDupEnd(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="modal-actions">
+                <button type="button" onClick={() => setShowDuplicate(false)}>
+                  Annulla
+                </button>
+                <button type="button" className="primary" onClick={handleConfirmDuplicate}>
+                  Duplica qui
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!showDuplicate && (
+            <div className="modal-actions">
+              <div className="modal-actions-secondary">
+                {initial && canDelete && onDelete && (
+                  <button type="button" className="danger" onClick={onDelete}>
+                    Elimina
+                  </button>
+                )}
+                {initial && canDelete && onDuplicate && (
+                  <button type="button" onClick={() => setShowDuplicate(true)}>
+                    Duplica
+                  </button>
+                )}
+              </div>
+              <div className="modal-actions-primary">
+                <button type="button" onClick={onClose}>
+                  Annulla
+                </button>
+                <button type="submit">Salva</button>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </div>
