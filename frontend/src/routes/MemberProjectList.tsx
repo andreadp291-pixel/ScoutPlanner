@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getMyProjects } from '../api/me'
+import { Spinner } from '../components/Spinner'
 
 export function MemberProjectList() {
   const { data, isLoading, error } = useQuery({ queryKey: ['my-projects'], queryFn: getMyProjects })
 
-  if (isLoading) return <p>Caricamento progetti...</p>
+  if (isLoading) return <Spinner label="Caricamento progetti..." />
   if (error) return <p role="alert">Errore nel caricamento dei progetti</p>
 
   return (

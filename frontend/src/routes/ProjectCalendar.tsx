@@ -14,6 +14,7 @@ import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
 import { toIsoDatetime } from '../components/calendar/time'
+import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
 function dateRange(start: string, end: string): string[] {
@@ -87,7 +88,7 @@ export function ProjectCalendar() {
     onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione'),
   })
 
-  if (projectQuery.isLoading) return <p>Caricamento progetto...</p>
+  if (projectQuery.isLoading) return <Spinner label="Caricamento progetto..." />
   if (projectQuery.error || !projectQuery.data) return <p role="alert">Progetto non trovato o accesso negato</p>
 
   const project = projectQuery.data
