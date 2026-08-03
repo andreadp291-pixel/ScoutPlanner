@@ -21,6 +21,9 @@ export function DayColumn({ date, activities, canEdit, onRequestCreate, onReques
   const totalMinutes = DAY_END_MINUTES - DAY_START_MINUTES
   const dayActivities = activities.filter((a) => a.start_at.startsWith(date))
 
+  const hourLines: number[] = []
+  for (let m = DAY_START_MINUTES; m <= DAY_END_MINUTES; m += 60) hourLines.push(m)
+
   function minutesFromPointer(clientY: number): number {
     const rect = trackRef.current!.getBoundingClientRect()
     const offsetY = clientY - rect.top
@@ -64,13 +67,19 @@ export function DayColumn({ date, activities, canEdit, onRequestCreate, onReques
         style={{
           position: 'relative',
           height: totalMinutes * PX_PER_MINUTE,
-          border: '1px solid #ddd',
           cursor: canEdit ? 'crosshair' : 'default',
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
+        {hourLines.map((m) => (
+          <div
+            key={m}
+            className="hour-line"
+            style={{ top: (m - DAY_START_MINUTES) * PX_PER_MINUTE }}
+          />
+        ))}
         {dayActivities.map((activity) => (
           <ActivityBlock
             key={activity.id}

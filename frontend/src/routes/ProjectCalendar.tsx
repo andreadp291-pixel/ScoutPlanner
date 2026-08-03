@@ -12,6 +12,7 @@ import {
 import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
+import { TimeAxis } from '../components/calendar/TimeAxis'
 import { toIsoDatetime } from '../components/calendar/time'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
@@ -106,7 +107,8 @@ export function ProjectCalendar() {
           </>
         )}
       </p>
-      <div className="calendar-scroll" style={{ display: 'flex', gap: 8 }}>
+      <div className="calendar-scroll" style={{ display: 'flex' }}>
+        <TimeAxis />
         {days.map((date) => (
           <DayColumn
             key={date}
