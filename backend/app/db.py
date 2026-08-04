@@ -73,11 +73,27 @@ CREATE TABLE IF NOT EXISTS owners (
     token_version  INTEGER NOT NULL DEFAULT 0,
     created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS groups (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_groups_project_id ON groups(project_id);
+
+CREATE TABLE IF NOT EXISTS activity_groups (
+    activity_id   INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    group_id      INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    PRIMARY KEY (activity_id, group_id)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_groups_group_id ON activity_groups(group_id);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.
 MIGRATIONS = [
     "ALTER TABLE project_tokens ADD COLUMN email TEXT",
+    "ALTER TABLE activities ADD COLUMN materials TEXT NOT NULL DEFAULT ''",
 ]
 
 

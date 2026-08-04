@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Activity, ActivityInput } from '../api/activities'
+import type { Group } from '../api/groups'
 import { FileTextIcon } from './icons/FileTextIcon'
 import { dateRange, formatChipLabel } from './calendar/time'
 
@@ -20,6 +21,8 @@ interface ActivityEditorModalProps {
   projectStartDate: string // 'YYYY-MM-DD', per limitare la selezione dei giorni di duplicazione
   projectEndDate: string
   canDelete: boolean
+  groups: Group[]
+  onCreateGroup?: (name: string) => Promise<Group>
   onSave: (input: ActivityInput) => void
   onDelete?: () => void
   onDuplicate?: (entries: DuplicateEntry[]) => void
@@ -34,6 +37,8 @@ export function ActivityEditorModal({
   projectStartDate,
   projectEndDate,
   canDelete,
+  groups,
+  onCreateGroup,
   onSave,
   onDelete,
   onDuplicate,
@@ -43,6 +48,9 @@ export function ActivityEditorModal({
   const [color, setColor] = useState(initial?.color ?? DEFAULT_COLOR)
   const [startTime, setStartTime] = useState((initial?.start_at ?? defaultStartAt ?? '').slice(11, 16))
   const [endTime, setEndTime] = useState((initial?.end_at ?? defaultEndAt ?? '').slice(11, 16))
+  const [materials, setMaterials] = useState(initial?.materials ?? '')
+  const [groupIds, setGroupIds] = useState<Set<number>>(() => new Set(initial?.group_ids ?? []))
+  const [newGroupName, setNewGroupName] = useState('')
 
   const datePart = (initial?.start_at ?? defaultStartAt ?? '').slice(0, 10)
 
@@ -72,6 +80,23 @@ export function ActivityEditorModal({
     onDelete()
   }
 
+  function toggleGroup(id: number) {
+    setGroupIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleAddGroup() {
+    const name = newGroupName.trim()
+    if (!name || !onCreateGroup) return
+    const created = await onCreateGroup(name)
+    setNewGroupName('')
+    setGroupIds((prev) => new Set(prev).add(created.id))
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     // Niente description/location qui: sono gestite nella pagina "Descrivi attività"
@@ -80,6 +105,8 @@ export function ActivityEditorModal({
       title,
       category: 'attivita',
       color,
+      materials,
+      group_ids: [...groupIds],
       start_at: `${datePart}T${startTime}`,
       end_at: `${datePart}T${endTime}`,
     })
@@ -137,6 +164,46 @@ export function ActivityEditorModal({
               />
             </label>
           </div>
+
+          {!showDuplicate && (
+            <>
+              <label>
+                Materiali
+                <textarea
+                  rows={2}
+                  placeholder="Es. corda, torcia, cerini…"
+                  value={materials}
+                  onChange={(e) => setMaterials(e.target.value)}
+                />
+              </label>
+
+              <label>Gruppi</label>
+              <div className="day-chip-row">
+                {groups.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`day-chip${groupIds.has(g.id) ? ' selected' : ''}`}
+                    onClick={() => toggleGroup(g.id)}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+              {onCreateGroup && (
+                <div className="time-range" style={{ marginTop: 6 }}>
+                  <input
+                    placeholder="Nuovo gruppo…"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                  />
+                  <button type="button" onClick={handleAddGroup} disabled={!newGroupName.trim()}>
+                    Aggiungi
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
           {initial && !showDuplicate && (
             <Link

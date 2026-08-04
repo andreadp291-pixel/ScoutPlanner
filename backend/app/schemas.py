@@ -46,8 +46,10 @@ class ActivityCreateIn(BaseModel):
     location: str = ""
     category: str
     color: str
+    materials: str = ""
     start_at: str  # 'YYYY-MM-DDTHH:MM'
     end_at: str
+    group_ids: list[int] = []
 
 
 class ActivityUpdateIn(BaseModel):
@@ -56,8 +58,21 @@ class ActivityUpdateIn(BaseModel):
     location: str | None = None
     category: str | None = None
     color: str | None = None
+    materials: str | None = None
     start_at: str | None = None
     end_at: str | None = None
+    group_ids: list[int] | None = None
+
+
+class GroupCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class GroupOut(BaseModel):
+    id: int
+    project_id: int
+    name: str
+    created_at: str
 
 
 class UploadOut(BaseModel):
@@ -79,11 +94,13 @@ class ActivityOut(BaseModel):
     location: str
     category: str
     color: str
+    materials: str
     start_at: str
     end_at: str
     created_by: str
     created_at: str
     updated_at: str
+    group_ids: list[int] = []
 
 
 class TokenCreateIn(BaseModel):

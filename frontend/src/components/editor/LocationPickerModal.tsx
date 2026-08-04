@@ -40,6 +40,17 @@ function RecenterOnChange({ center, zoom }: { center: [number, number]; zoom: nu
   return null
 }
 
+// Il modal si apre con un'animazione CSS (scaleIn): Leaflet misura il contenitore
+// al montaggio, prima che l'animazione finisca, e finisce con tile mal dimensionate/duplicate.
+function MapSizeFix() {
+  const map = useMap()
+  useEffect(() => {
+    const timer = setTimeout(() => map.invalidateSize(), 250)
+    return () => clearTimeout(timer)
+  }, [map])
+  return null
+}
+
 export function LocationPickerModal({ onConfirm, onClose }: LocationPickerModalProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -113,6 +124,7 @@ export function LocationPickerModal({ onConfirm, onClose }: LocationPickerModalP
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <RecenterOnChange center={center} zoom={zoom} />
+            <MapSizeFix />
             <ClickCatcher onPick={pickFromMap} />
             {selected && <Marker position={[selected.lat, selected.lon]} />}
           </MapContainer>

@@ -8,11 +8,13 @@ export interface Activity {
   location: string
   category: string
   color: string
+  materials: string
   start_at: string
   end_at: string
   created_by: string
   created_at: string
   updated_at: string
+  group_ids: number[]
 }
 
 export interface ActivityInput {
@@ -21,8 +23,10 @@ export interface ActivityInput {
   location?: string
   category: string
   color: string
+  materials?: string
   start_at: string
   end_at: string
+  group_ids?: number[]
 }
 
 export function listActivities(projectId: number) {

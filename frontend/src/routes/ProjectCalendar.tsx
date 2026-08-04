@@ -11,13 +11,16 @@ import {
   type ActivityInput,
 } from '../api/activities'
 import { getProject, getProjectAccess } from '../api/projects'
+import { createGroup, deleteGroup, listGroups, renameGroup } from '../api/groups'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
+import { GroupsManagerModal } from '../components/GroupsManagerModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
 import { dateRange, formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
 import { DownloadIcon } from '../components/icons/DownloadIcon'
 import { ShareIcon } from '../components/icons/ShareIcon'
 import { UploadIcon } from '../components/icons/UploadIcon'
+import { UsersIcon } from '../components/icons/UsersIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
@@ -35,6 +38,7 @@ export function ProjectCalendar() {
   const [editorState, setEditorState] = useState<EditorState>(null)
   const [dragHoverDate, setDragHoverDate] = useState<string | null>(null)
   const [swapTargetId, setSwapTargetId] = useState<number | null>(null)
+  const [showGroupsManager, setShowGroupsManager] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -53,8 +57,35 @@ export function ProjectCalendar() {
     queryFn: () => listActivities(id),
     enabled: !!projectQuery.data,
   })
+  const groupsQuery = useQuery({
+    queryKey: ['groups', id],
+    queryFn: () => listGroups(id),
+    enabled: !!projectQuery.data,
+  })
 
   const invalidateActivities = () => queryClient.invalidateQueries({ queryKey: ['activities', id] })
+  const invalidateGroups = () => queryClient.invalidateQueries({ queryKey: ['groups', id] })
+
+  const createGroupMutation = useMutation({
+    mutationFn: (name: string) => createGroup(id, name),
+    onSuccess: invalidateGroups,
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante la creazione del gruppo'),
+  })
+
+  const renameGroupMutation = useMutation({
+    mutationFn: ({ groupId, name }: { groupId: number; name: string }) => renameGroup(id, groupId, name),
+    onSuccess: invalidateGroups,
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante la rinomina del gruppo'),
+  })
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: (groupId: number) => deleteGroup(id, groupId),
+    onSuccess: () => {
+      invalidateGroups()
+      invalidateActivities()
+    },
+    onError: (err) => alert(err instanceof Error ? err.message : "Errore durante l'eliminazione del gruppo"),
+  })
 
   const createMutation = useMutation({
     mutationFn: (input: ActivityInput) => createActivity(id, input),
@@ -150,6 +181,7 @@ export function ProjectCalendar() {
           location: entry.location ?? '',
           category: entry.category ?? 'attivita',
           color: entry.color,
+          materials: entry.materials ?? '',
           start_at: entry.start_at,
           end_at: entry.end_at,
         }))
@@ -202,6 +234,12 @@ export function ProjectCalendar() {
                 Importa
               </button>
             </>
+          )}
+          {canEdit && (
+            <button type="button" onClick={() => setShowGroupsManager(true)}>
+              <UsersIcon />
+              Gruppi
+            </button>
           )}
           {isOwner && (
             <Link to={`/projects/${id}/tokens`}>
@@ -262,6 +300,16 @@ export function ProjectCalendar() {
         ))}
       </div>
 
+      {showGroupsManager && (
+        <GroupsManagerModal
+          groups={groupsQuery.data ?? []}
+          onCreate={(name) => createGroupMutation.mutate(name)}
+          onRename={(groupId, name) => renameGroupMutation.mutate({ groupId, name })}
+          onDelete={(groupId) => deleteGroupMutation.mutate(groupId)}
+          onClose={() => setShowGroupsManager(false)}
+        />
+      )}
+
       {editorState && (
         <ActivityEditorModal
           projectId={id}
@@ -272,6 +320,8 @@ export function ProjectCalendar() {
           projectStartDate={project.start_date}
           projectEndDate={project.end_date}
           canDelete={canEdit}
+          groups={groupsQuery.data ?? []}
+          onCreateGroup={canEdit ? (name) => createGroup(id, name).then((g) => { invalidateGroups(); return g }) : undefined}
           onSave={(input) => {
             if (editorState.mode === 'create') {
               createMutation.mutate(input)
@@ -295,6 +345,8 @@ export function ProjectCalendar() {
                       location: a.location,
                       category: a.category,
                       color: a.color,
+                      materials: a.materials,
+                      group_ids: a.group_ids,
                       start_at: startAt,
                       end_at: endAt,
                     })),
