@@ -76,9 +76,13 @@ export function ActivityEditorModal({
     onDelete()
   }
 
-  function handleGroupSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const selected = new Set([...e.target.options].filter((o) => o.selected).map((o) => Number(o.value)))
-    setGroupIds(selected)
+  function toggleGroup(id: number) {
+    setGroupIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -149,16 +153,21 @@ export function ActivityEditorModal({
           </div>
 
           {!showDuplicate && groups.length > 0 && (
-            <label>
-              Gruppi
-              <select multiple value={[...groupIds].map(String)} onChange={handleGroupSelectChange} size={Math.min(groups.length, 5)}>
+            <>
+              <label>Gruppi</label>
+              <div className="group-checkbox-list">
                 {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
+                  <label key={g.id} className="group-checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={groupIds.has(g.id)}
+                      onChange={() => toggleGroup(g.id)}
+                    />
                     {g.name}
-                  </option>
+                  </label>
                 ))}
-              </select>
-            </label>
+              </div>
+            </>
           )}
 
           {initial && !showDuplicate && (
