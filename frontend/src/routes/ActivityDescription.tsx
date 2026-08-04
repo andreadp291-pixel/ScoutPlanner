@@ -106,16 +106,18 @@ export function ActivityDescription() {
         onChange={setPendingContent}
       />
 
-      <label style={{ marginTop: 20, display: 'block' }}>
-        Materiali
-        <textarea
-          rows={3}
-          placeholder="Es. corda, torcia, cerini…"
-          value={currentMaterials}
-          disabled={!canEdit}
-          onChange={(e) => setMaterials(e.target.value)}
-        />
-      </label>
+      <form onSubmit={(e) => e.preventDefault()} style={{ marginTop: 20 }}>
+        <label>
+          Materiali
+          <textarea
+            rows={3}
+            placeholder="Es. corda, torcia, cerini…"
+            value={currentMaterials}
+            disabled={!canEdit}
+            onChange={(e) => setMaterials(e.target.value)}
+          />
+        </label>
+      </form>
 
       {canEdit && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>

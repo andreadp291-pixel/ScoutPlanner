@@ -961,6 +961,15 @@ code {
   border: 1px solid var(--border);
 }
 
+/* Leaflet assegna ai suoi pannelli/controlli interni z-index alti (400-1000).
+   Senza uno z-index esplicito qui, .leaflet-container non isola questi valori
+   in un proprio stacking context: "sfondano" verso l'alto e finiscono sopra
+   ai modal (es. la mappa di un'attività sopra il popup "Scegli una posizione"). */
+.leaflet-container {
+  position: relative;
+  z-index: 0;
+}
+
 /* --- editor edit/preview tabs --- */
 .editor-mode-tabs {
   display: flex;
