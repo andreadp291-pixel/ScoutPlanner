@@ -4,6 +4,10 @@ import { useProjectAccessStore } from '../state/projectAccessStore'
 
 const API_BASE = import.meta.env.VITE_API_BASE as string
 
+export function resolveApiUrl(path: string): string {
+  return `${API_BASE}${path}`
+}
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -58,5 +62,22 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   }
 
   if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
+}
+
+export async function apiUpload<T>(path: string, file: File, projectId: number): Promise<T> {
+  const token = resolveToken({ projectId })
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const form = new FormData()
+  form.append('file', file)
+
+  const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: form })
+
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new ApiError(res.status, detail.detail ?? res.statusText)
+  }
   return res.json() as Promise<T>
 }

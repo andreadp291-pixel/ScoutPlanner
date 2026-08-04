@@ -102,7 +102,10 @@ export function ProjectCalendar() {
       invalidateActivities()
       setEditorState(null)
     },
-    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante la duplicazione'),
+    onError: (err) => {
+      invalidateActivities()
+      alert(err instanceof Error ? err.message : 'Errore durante la duplicazione')
+    },
   })
 
   const swapMutation = useMutation({
@@ -116,7 +119,10 @@ export function ProjectCalendar() {
       for (const input of imported) await createActivity(id, input)
     },
     onSuccess: invalidateActivities,
-    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante l\'importazione'),
+    onError: (err) => {
+      invalidateActivities()
+      alert(err instanceof Error ? err.message : 'Errore durante l\'importazione')
+    },
   })
 
   function handleExport() {
@@ -258,6 +264,7 @@ export function ProjectCalendar() {
 
       {editorState && (
         <ActivityEditorModal
+          projectId={id}
           date={editorState.mode === 'create' ? editorState.date : editorState.activity.start_at.slice(0, 10)}
           initial={editorState.mode === 'edit' ? editorState.activity : undefined}
           defaultStartAt={editorState.mode === 'create' ? editorState.startAt : undefined}

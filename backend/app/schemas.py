@@ -60,6 +60,12 @@ class ActivityUpdateIn(BaseModel):
     end_at: str | None = None
 
 
+class UploadOut(BaseModel):
+    url: str
+    filename: str
+    kind: str  # 'image' | 'gpx'
+
+
 class ActivitySwapIn(BaseModel):
     id_a: int
     id_b: int

@@ -29,6 +29,10 @@ export function listActivities(projectId: number) {
   return apiFetch<Activity[]>(`/projects/${projectId}/activities`, { projectId })
 }
 
+export function getActivity(projectId: number, activityId: number) {
+  return apiFetch<Activity>(`/projects/${projectId}/activities/${activityId}`, { projectId })
+}
+
 export function createActivity(projectId: number, input: ActivityInput) {
   return apiFetch<Activity>(`/projects/${projectId}/activities`, {
     method: 'POST',

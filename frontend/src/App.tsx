@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-d
 import { useAuthStore } from './state/authStore'
 import { useMemberAuthStore } from './state/memberAuthStore'
 import { Layout } from './components/Layout'
+import { ActivityDescription } from './routes/ActivityDescription'
 import { AuthCallback } from './routes/AuthCallback'
 import { Home } from './routes/Home'
 import { MemberChangePassword } from './routes/MemberChangePassword'
@@ -104,6 +105,10 @@ function App() {
               />
               {/* Raggiungibile da owner, membri con account, o chi ha un token di condivisione (?t=...) */}
               <Route path="/projects/:projectId" element={<ProjectCalendar />} />
+              <Route
+                path="/projects/:projectId/activities/:activityId/description"
+                element={<ActivityDescription />}
+              />
               <Route
                 path="/projects/:projectId/tokens"
                 element={

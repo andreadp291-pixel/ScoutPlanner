@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Activity, ActivityInput } from '../api/activities'
+import { FileTextIcon } from './icons/FileTextIcon'
 import { dateRange, formatChipLabel } from './calendar/time'
 
 const DEFAULT_COLOR = '#3b82f6'
@@ -11,6 +13,7 @@ export interface DuplicateEntry {
 
 interface ActivityEditorModalProps {
   date: string // 'YYYY-MM-DD' del giorno su cui si sta operando
+  projectId: number
   initial?: Activity // presente = modifica, assente = creazione
   defaultStartAt?: string // ISO datetime usato in creazione
   defaultEndAt?: string
@@ -24,6 +27,7 @@ interface ActivityEditorModalProps {
 }
 
 export function ActivityEditorModal({
+  projectId,
   initial,
   defaultStartAt,
   defaultEndAt,
@@ -36,8 +40,6 @@ export function ActivityEditorModal({
   onClose,
 }: ActivityEditorModalProps) {
   const [title, setTitle] = useState(initial?.title ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [location, setLocation] = useState(initial?.location ?? '')
   const [color, setColor] = useState(initial?.color ?? DEFAULT_COLOR)
   const [startTime, setStartTime] = useState((initial?.start_at ?? defaultStartAt ?? '').slice(11, 16))
   const [endTime, setEndTime] = useState((initial?.end_at ?? defaultEndAt ?? '').slice(11, 16))
@@ -72,10 +74,10 @@ export function ActivityEditorModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // Niente description/location qui: sono gestite nella pagina "Descrivi attività"
+    // e non vanno sovrascritte da questo form ridotto.
     onSave({
       title,
-      description,
-      location,
       category: 'attivita',
       color,
       start_at: `${datePart}T${startTime}`,
@@ -103,14 +105,6 @@ export function ActivityEditorModal({
           <label>
             Titolo
             <input required value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-          </label>
-          <label>
-            Descrizione
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-          </label>
-          <label>
-            Luogo
-            <input value={location} onChange={(e) => setLocation(e.target.value)} />
           </label>
           <label>
             Colore
@@ -143,6 +137,16 @@ export function ActivityEditorModal({
               />
             </label>
           </div>
+
+          {initial && !showDuplicate && (
+            <Link
+              to={`/projects/${projectId}/activities/${initial.id}/description`}
+              className="btn describe-activity-btn"
+            >
+              <FileTextIcon />
+              Descrivi attività
+            </Link>
+          )}
 
           {showDuplicate && (
             <div className="duplicate-panel">
