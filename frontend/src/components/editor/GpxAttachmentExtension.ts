@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { GpxAttachmentView } from './GpxAttachmentView'
 
 export interface GpxAttachmentAttrs {
   url: string
@@ -64,5 +66,9 @@ export const GpxAttachment = Node.create({
         ({ commands }) =>
           commands.insertContent({ type: this.name, attrs }),
     }
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(GpxAttachmentView)
   },
 })

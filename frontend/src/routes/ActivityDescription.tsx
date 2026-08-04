@@ -24,6 +24,7 @@ export function ActivityDescription() {
   const queryClient = useQueryClient()
   const [pendingContent, setPendingContent] = useState<JSONContent | null>(null)
   const [saved, setSaved] = useState(false)
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
   const accessQuery = useQuery({ queryKey: ['access', id], queryFn: () => getProjectAccess(id) })
   const activityQuery = useQuery({
@@ -50,6 +51,7 @@ export function ActivityDescription() {
 
   const activity = activityQuery.data
   const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
+  const currentContent = pendingContent ?? parseDescription(activity.description)
 
   return (
     <div>
@@ -64,10 +66,30 @@ export function ActivityDescription() {
         {activity.start_at.slice(0, 10)} · {activity.start_at.slice(11, 16)}–{activity.end_at.slice(11, 16)}
       </p>
 
+      {canEdit && (
+        <div className="editor-mode-tabs">
+          <button
+            type="button"
+            className={mode === 'edit' ? 'active' : ''}
+            onClick={() => setMode('edit')}
+          >
+            Modifica
+          </button>
+          <button
+            type="button"
+            className={mode === 'preview' ? 'active' : ''}
+            onClick={() => setMode('preview')}
+          >
+            Anteprima
+          </button>
+        </div>
+      )}
+
       <RichTextEditor
+        key={mode}
         projectId={id}
-        content={parseDescription(activity.description)}
-        editable={canEdit}
+        content={currentContent}
+        editable={canEdit && mode === 'edit'}
         onChange={setPendingContent}
       />
 

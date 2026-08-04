@@ -7,9 +7,10 @@ import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
 import { EditorContent, type JSONContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { uploadFile } from '../../api/uploads'
 import { GpxAttachment } from './GpxAttachmentExtension'
+import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
 
 interface RichTextEditorProps {
   projectId: number
@@ -23,6 +24,7 @@ const EMPTY_DOC: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] }
 export function RichTextEditor({ projectId, content, editable, onChange }: RichTextEditorProps) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const gpxInputRef = useRef<HTMLInputElement>(null)
+  const [showLocationPicker, setShowLocationPicker] = useState(false)
 
   const editor = useEditor({
     extensions: [
@@ -57,7 +59,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
     if (!file || !editor) return
     try {
       const result = await uploadFile(projectId, file)
-      editor.chain().focus().setImage({ src: result.url, alt: result.filename }).run()
+      editor.chain().focus().setImage({ src: result.url, alt: result.filename }).scrollIntoView().run()
     } catch (err) {
       alert(err instanceof Error ? err.message : "Errore durante il caricamento dell'immagine")
     }
@@ -69,7 +71,12 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
     if (!file || !editor) return
     try {
       const result = await uploadFile(projectId, file)
-      editor.chain().focus().insertGpxAttachment({ url: result.url, filename: result.filename }).run()
+      editor
+        .chain()
+        .focus()
+        .insertGpxAttachment({ url: result.url, filename: result.filename })
+        .scrollIntoView()
+        .run()
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore durante il caricamento del file GPX')
     }
@@ -87,7 +94,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
       alert('URL non valido')
       return
     }
-    editor.chain().focus().setImage({ src: url }).run()
+    editor.chain().focus().setImage({ src: url }).scrollIntoView().run()
   }
 
   function handleLink() {
@@ -103,7 +110,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
       alert('URL non valido')
       return
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).scrollIntoView().run()
   }
 
   function handlePhone() {
@@ -121,31 +128,43 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
         },
         { type: 'text', text: ' ' },
       ])
+      .scrollIntoView()
       .run()
   }
 
-  function handleLocation() {
+  function handleLocationConfirm(picked: PickedLocation) {
+    setShowLocationPicker(false)
     if (!editor) return
-    const place = window.prompt('Nome del luogo o indirizzo')
-    if (!place) return
-    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`
+    const mapsUrl = `https://www.openstreetmap.org/?mlat=${picked.lat}&mlon=${picked.lon}#map=16/${picked.lat}/${picked.lon}`
     editor
       .chain()
       .focus()
       .insertContent([
         {
           type: 'text',
-          text: `📍 ${place}`,
+          text: `📍 ${picked.name}`,
           marks: [{ type: 'link', attrs: { href: mapsUrl, target: '_blank', rel: 'noopener noreferrer' } }],
         },
         { type: 'text', text: ' ' },
       ])
+      .scrollIntoView()
       .run()
   }
 
   function handleTable() {
     if (!editor) return
-    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+    const rowsStr = window.prompt('Numero di righe (esclusa l\'intestazione)', '3')
+    if (!rowsStr) return
+    const colsStr = window.prompt('Numero di colonne', '3')
+    if (!colsStr) return
+    const rows = Math.min(Math.max(parseInt(rowsStr, 10) || 3, 1), 30)
+    const cols = Math.min(Math.max(parseInt(colsStr, 10) || 3, 1), 12)
+    editor
+      .chain()
+      .focus()
+      .insertTable({ rows: rows + 1, cols, withHeaderRow: true })
+      .scrollIntoView()
+      .run()
   }
 
   return (
@@ -200,7 +219,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
           <button type="button" onClick={handlePhone} title="Numero di telefono">
             📞 Telefono
           </button>
-          <button type="button" onClick={handleLocation} title="Posizione">
+          <button type="button" onClick={() => setShowLocationPicker(true)} title="Posizione">
             📍 Posizione
           </button>
           <button type="button" onClick={() => gpxInputRef.current?.click()} title="Carica traccia GPX">
@@ -211,6 +230,12 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
         </div>
       )}
       <EditorContent editor={editor} className="rich-editor-content" />
+      {showLocationPicker && (
+        <LocationPickerModal
+          onConfirm={handleLocationConfirm}
+          onClose={() => setShowLocationPicker(false)}
+        />
+      )}
     </div>
   )
 }
