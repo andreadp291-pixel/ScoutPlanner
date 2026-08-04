@@ -121,7 +121,7 @@ export function LocationPickerModal({ onConfirm, onClose }: LocationPickerModalP
           <MapContainer center={center} zoom={zoom} style={{ height: 320, width: '100%' }}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <RecenterOnChange center={center} zoom={zoom} />
             <MapSizeFix />

@@ -972,8 +972,12 @@ code {
   position: relative;
   z-index: 0;
 }
+.leaflet-bar {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+}
 .leaflet-bar a {
   border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 .gpx-choice-row {

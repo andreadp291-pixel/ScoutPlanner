@@ -111,7 +111,7 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {trackSegments.map((segment, i) => (
                 <Polyline key={i} positions={segment} pathOptions={{ color: '#c0392b', weight: 3 }} />
