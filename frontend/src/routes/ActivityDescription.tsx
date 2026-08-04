@@ -23,6 +23,7 @@ export function ActivityDescription() {
   const actId = Number(activityId)
   const queryClient = useQueryClient()
   const [pendingContent, setPendingContent] = useState<JSONContent | null>(null)
+  const [materials, setMaterials] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
 
@@ -44,6 +45,17 @@ export function ActivityDescription() {
     onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
   })
 
+  const saveMaterialsMutation = useMutation({
+    mutationFn: (value: string) => updateActivity(id, actId, { materials: value }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activity', id, actId] })
+      queryClient.invalidateQueries({ queryKey: ['activities', id] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    },
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
+  })
+
   if (activityQuery.isLoading) return <Spinner label="Caricamento attività..." />
   if (activityQuery.error || !activityQuery.data) {
     return <p role="alert">Attività non trovata o accesso negato</p>
@@ -52,6 +64,7 @@ export function ActivityDescription() {
   const activity = activityQuery.data
   const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
   const currentContent = pendingContent ?? parseDescription(activity.description)
+  const currentMaterials = materials ?? activity.materials
 
   return (
     <div>
@@ -93,15 +106,32 @@ export function ActivityDescription() {
         onChange={setPendingContent}
       />
 
+      <label style={{ marginTop: 20, display: 'block' }}>
+        Materiali
+        <textarea
+          rows={3}
+          placeholder="Es. corda, torcia, cerini…"
+          value={currentMaterials}
+          disabled={!canEdit}
+          onChange={(e) => setMaterials(e.target.value)}
+        />
+      </label>
+
       {canEdit && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>
           <button
             type="button"
             className="primary"
-            onClick={() => pendingContent && saveMutation.mutate(pendingContent)}
-            disabled={saveMutation.isPending || !pendingContent}
+            onClick={() => {
+              if (pendingContent) saveMutation.mutate(pendingContent)
+              if (materials !== null) saveMaterialsMutation.mutate(materials)
+            }}
+            disabled={
+              (saveMutation.isPending || saveMaterialsMutation.isPending) ||
+              (!pendingContent && materials === null)
+            }
           >
-            {saveMutation.isPending ? 'Salvataggio...' : 'Salva'}
+            {saveMutation.isPending || saveMaterialsMutation.isPending ? 'Salvataggio...' : 'Salva'}
           </button>
           {saved && <span className="muted">Salvato ✓</span>}
         </div>

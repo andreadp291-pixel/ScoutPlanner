@@ -321,7 +321,6 @@ export function ProjectCalendar() {
           projectEndDate={project.end_date}
           canDelete={canEdit}
           groups={groupsQuery.data ?? []}
-          onCreateGroup={canEdit ? (name) => createGroup(id, name).then((g) => { invalidateGroups(); return g }) : undefined}
           onSave={(input) => {
             if (editorState.mode === 'create') {
               createMutation.mutate(input)
