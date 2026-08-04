@@ -1,18 +1,29 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Activity } from '../../api/activities'
 import { ActivityBlock } from './ActivityBlock'
-import { DAY_END_MINUTES, DAY_START_MINUTES, PX_PER_MINUTE, clampMinutes, formatDayLabel } from './time'
+import {
+  DAY_END_MINUTES,
+  DAY_START_MINUTES,
+  PX_PER_MINUTE,
+  clampMinutes,
+  formatDayLabel,
+  nowMinutes,
+  todayDateString,
+} from './time'
 
 interface DayColumnProps {
   date: string // 'YYYY-MM-DD'
   activities: Activity[]
   canEdit: boolean
   isDropTarget: boolean
+  swapTargetId: number | null
   onRequestCreate: (date: string, startMinutes: number, endMinutes: number) => void
   onRequestEdit: (activity: Activity) => void
   onRequestMove: (activity: Activity, newDate: string, newStartMinutes: number) => void
   onRequestResize: (activity: Activity, newEndMinutes: number) => void
+  onRequestSwap: (activity: Activity, targetActivityId: number) => void
   onDragHoverDate: (date: string | null) => void
+  onSwapHoverId: (activityId: number | null) => void
 }
 
 const DEFAULT_DURATION_MINUTES = 30
@@ -22,15 +33,26 @@ export function DayColumn({
   activities,
   canEdit,
   isDropTarget,
+  swapTargetId,
   onRequestCreate,
   onRequestEdit,
   onRequestMove,
   onRequestResize,
+  onRequestSwap,
   onDragHoverDate,
+  onSwapHoverId,
 }: DayColumnProps) {
   const trackRef = useRef<HTMLDivElement>(null)
   const [dragPreview, setDragPreview] = useState<{ start: number; end: number } | null>(null)
   const dragOrigin = useRef<number | null>(null)
+
+  const isToday = date === todayDateString()
+  const [now, setNow] = useState(() => nowMinutes())
+  useEffect(() => {
+    if (!isToday) return
+    const id = setInterval(() => setNow(nowMinutes()), 60_000)
+    return () => clearInterval(id)
+  }, [isToday])
 
   const totalMinutes = DAY_END_MINUTES - DAY_START_MINUTES
   const dayActivities = activities.filter((a) => a.start_at.startsWith(date))
@@ -74,7 +96,7 @@ export function DayColumn({
 
   return (
     <div className="day-column" style={{ width: 220 }}>
-      <div className="day-column-header">{formatDayLabel(date)}</div>
+      <div className={`day-column-header${isToday ? ' is-today' : ''}`}>{formatDayLabel(date)}</div>
       <div
         ref={trackRef}
         className={`day-column-track${isDropTarget ? ' drop-target' : ''}`}
@@ -102,12 +124,18 @@ export function DayColumn({
             dayStartMinutes={DAY_START_MINUTES}
             pxPerMinute={PX_PER_MINUTE}
             canEdit={canEdit}
+            isSwapTarget={swapTargetId === activity.id}
             onClick={() => onRequestEdit(activity)}
             onMove={(newDate, newStart) => onRequestMove(activity, newDate, newStart)}
             onResize={(newEnd) => onRequestResize(activity, newEnd)}
+            onSwap={(targetActivityId) => onRequestSwap(activity, targetActivityId)}
             onDragHoverDate={onDragHoverDate}
+            onSwapHoverId={onSwapHoverId}
           />
         ))}
+        {isToday && now >= DAY_START_MINUTES && now <= DAY_END_MINUTES && (
+          <div className="now-line" style={{ top: (now - DAY_START_MINUTES) * PX_PER_MINUTE }} />
+        )}
         {dragPreview && (
           <div
             style={{

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   createActivity,
   deleteActivity,
   listActivities,
+  swapActivities,
   updateActivity,
   type Activity,
   type ActivityInput,
@@ -14,7 +15,9 @@ import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
 import { formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
+import { DownloadIcon } from '../components/icons/DownloadIcon'
 import { ShareIcon } from '../components/icons/ShareIcon'
+import { UploadIcon } from '../components/icons/UploadIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
@@ -49,6 +52,8 @@ export function ProjectCalendar() {
   const queryClient = useQueryClient()
   const [editorState, setEditorState] = useState<EditorState>(null)
   const [dragHoverDate, setDragHoverDate] = useState<string | null>(null)
+  const [swapTargetId, setSwapTargetId] = useState<number | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const shareToken = searchParams.get('t')
@@ -107,6 +112,53 @@ export function ProjectCalendar() {
     onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione'),
   })
 
+  const swapMutation = useMutation({
+    mutationFn: ({ idA, idB }: { idA: number; idB: number }) => swapActivities(id, idA, idB),
+    onSuccess: invalidateActivities,
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante lo scambio'),
+  })
+
+  const importMutation = useMutation({
+    mutationFn: async (imported: ActivityInput[]) => {
+      for (const input of imported) await createActivity(id, input)
+    },
+    onSuccess: invalidateActivities,
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante l\'importazione'),
+  })
+
+  function handleExport() {
+    const blob = new Blob([JSON.stringify(activitiesQuery.data ?? [], null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `calendario-${project?.name ?? id}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    file
+      .text()
+      .then((text) => {
+        const parsed = JSON.parse(text)
+        if (!Array.isArray(parsed)) throw new Error('Il file deve contenere un array di eventi')
+        const inputs: ActivityInput[] = parsed.map((entry) => ({
+          title: entry.title,
+          description: entry.description ?? '',
+          location: entry.location ?? '',
+          category: entry.category ?? 'attivita',
+          color: entry.color,
+          start_at: entry.start_at,
+          end_at: entry.end_at,
+        }))
+        importMutation.mutate(inputs)
+      })
+      .catch((err) => alert(err instanceof Error ? err.message : 'File non valido'))
+  }
+
   if (projectQuery.isLoading) return <Spinner label="Caricamento progetto..." />
   if (projectQuery.error || !projectQuery.data) return <p role="alert">Progetto non trovato o accesso negato</p>
 
@@ -124,14 +176,39 @@ export function ProjectCalendar() {
             {formatShortDate(project.start_date)} → {formatShortDate(project.end_date)}
           </p>
         </div>
-        {isOwner && (
-          <Link to={`/projects/${id}/tokens`}>
-            <button type="button" className="primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <ShareIcon />
-              Gestisci persone
-            </button>
-          </Link>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button type="button" onClick={handleExport}>
+            <DownloadIcon />
+            Esporta
+          </button>
+          {canEdit && (
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json"
+                onChange={handleImportFile}
+                style={{ display: 'none' }}
+              />
+              <button type="button" onClick={() => importInputRef.current?.click()}>
+                <UploadIcon />
+                Importa
+              </button>
+            </>
+          )}
+          {isOwner && (
+            <Link to={`/projects/${id}/tokens`}>
+              <button
+                type="button"
+                className="primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+              >
+                <ShareIcon />
+                Gestisci persone
+              </button>
+            </Link>
+          )}
+        </div>
       </div>
       <div className="calendar-scroll" style={{ display: 'flex' }}>
         <TimeAxis />
@@ -142,7 +219,9 @@ export function ProjectCalendar() {
             activities={activitiesQuery.data ?? []}
             canEdit={canEdit}
             isDropTarget={dragHoverDate === date}
+            swapTargetId={swapTargetId}
             onDragHoverDate={setDragHoverDate}
+            onSwapHoverId={setSwapTargetId}
             onRequestCreate={(d, startMinutes, endMinutes) =>
               setEditorState({
                 mode: 'create',
@@ -169,6 +248,9 @@ export function ProjectCalendar() {
                 input: { end_at: toIsoDatetime(activityDate, newEndMinutes) },
               })
             }}
+            onRequestSwap={(activity, targetActivityId) =>
+              swapMutation.mutate({ idA: activity.id, idB: targetActivityId })
+            }
           />
         ))}
       </div>

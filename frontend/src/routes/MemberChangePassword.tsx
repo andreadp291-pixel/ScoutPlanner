@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { memberChangePassword } from '../api/auth'
+import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 
 export function MemberChangePassword() {
@@ -63,8 +64,11 @@ export function MemberChangePassword() {
           </p>
         )}
       </form>
-      <p className="muted" style={{ marginTop: 16 }}>
-        <Link to="/me/projects">← Torna ai progetti</Link>
+      <p style={{ marginTop: 16 }}>
+        <Link to="/me/projects" className="btn">
+          <ArrowLeftIcon />
+          Torna ai progetti
+        </Link>
       </p>
     </div>
   )

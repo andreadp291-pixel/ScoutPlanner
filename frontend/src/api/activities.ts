@@ -51,3 +51,11 @@ export function deleteActivity(projectId: number, activityId: number) {
     projectId,
   })
 }
+
+export function swapActivities(projectId: number, idA: number, idB: number) {
+  return apiFetch<Activity[]>(`/projects/${projectId}/activities/swap`, {
+    method: 'POST',
+    body: { id_a: idA, id_b: idB },
+    projectId,
+  })
+}

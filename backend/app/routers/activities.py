@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
 from ..deps import Actor, require_project_role
-from ..schemas import ActivityCreateIn, ActivityOut, ActivityUpdateIn
+from ..schemas import ActivityCreateIn, ActivityOut, ActivitySwapIn, ActivityUpdateIn
 
 router = APIRouter(prefix="/projects/{project_id}/activities", tags=["activities"])
 
@@ -31,6 +31,34 @@ async def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require
         activity_id = cur.lastrowid
         row = conn.execute("SELECT * FROM activities WHERE id = ?", (activity_id,)).fetchone()
     return dict(row)
+
+
+@router.post("/swap", response_model=list[ActivityOut])
+async def swap_activities(body: ActivitySwapIn, actor: Actor = Depends(require_project_role("editor"))):
+    if body.id_a == body.id_b:
+        raise HTTPException(400, "id_a e id_b devono essere diversi")
+    with get_conn() as conn:
+        row_a = conn.execute(
+            "SELECT * FROM activities WHERE id = ? AND project_id = ?", (body.id_a, actor.project_id)
+        ).fetchone()
+        row_b = conn.execute(
+            "SELECT * FROM activities WHERE id = ? AND project_id = ?", (body.id_b, actor.project_id)
+        ).fetchone()
+        if not row_a or not row_b:
+            raise HTTPException(404, "Attività non trovata")
+        conn.execute(
+            "UPDATE activities SET start_at = ?, end_at = ?, updated_at = datetime('now') WHERE id = ?",
+            (row_b["start_at"], row_b["end_at"], body.id_a),
+        )
+        conn.execute(
+            "UPDATE activities SET start_at = ?, end_at = ?, updated_at = datetime('now') WHERE id = ?",
+            (row_a["start_at"], row_a["end_at"], body.id_b),
+        )
+        result = conn.execute(
+            "SELECT * FROM activities WHERE id IN (?, ?) AND project_id = ?",
+            (body.id_a, body.id_b, actor.project_id),
+        ).fetchall()
+    return [dict(r) for r in result]
 
 
 @router.patch("/{activity_id}", response_model=ActivityOut)

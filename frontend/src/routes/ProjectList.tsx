@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { listProjects } from '../api/projects'
 import { formatShortDate } from '../components/calendar/time'
+import { PlusIcon } from '../components/icons/PlusIcon'
 import { Spinner } from '../components/Spinner'
 
 export function ProjectList() {
@@ -15,7 +16,8 @@ export function ProjectList() {
       <h1>I tuoi progetti</h1>
       <Link to="/projects/new">
         <button type="button" className="primary">
-          + Nuovo progetto
+          <PlusIcon />
+          Nuovo progetto
         </button>
       </Link>
       <ul className="project-list">

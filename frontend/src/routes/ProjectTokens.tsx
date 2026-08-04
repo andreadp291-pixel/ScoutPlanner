@@ -14,6 +14,7 @@ import {
   revokeToken,
   type ProjectTokenCreated,
 } from '../api/tokens'
+import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 
 function shareUrlFor(projectId: number, rawToken: string): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}#/projects/${projectId}?t=${rawToken}`
@@ -97,7 +98,10 @@ export function ProjectTokens() {
   return (
     <div>
       <p>
-        <Link to={`/projects/${id}`}>← Torna al calendario</Link>
+        <Link to={`/projects/${id}`} className="btn">
+          <ArrowLeftIcon />
+          Torna al calendario
+        </Link>
       </p>
       <h1>Gestisci persone</h1>
       <p className="muted">

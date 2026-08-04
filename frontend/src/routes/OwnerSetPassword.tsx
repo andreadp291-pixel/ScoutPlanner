@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ownerSetPassword } from '../api/auth'
+import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { useAuthStore } from '../state/authStore'
 
 export function OwnerSetPassword() {
@@ -64,8 +65,11 @@ export function OwnerSetPassword() {
           </p>
         )}
       </form>
-      <p className="muted" style={{ marginTop: 16 }}>
-        <Link to="/projects">← Torna ai progetti</Link>
+      <p style={{ marginTop: 16 }}>
+        <Link to="/projects" className="btn">
+          <ArrowLeftIcon />
+          Torna ai progetti
+        </Link>
       </p>
     </div>
   )

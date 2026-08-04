@@ -35,6 +35,19 @@ export function formatDayLabel(date: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
+export function todayDateString(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export function nowMinutes(): number {
+  const d = new Date()
+  return d.getHours() * 60 + d.getMinutes()
+}
+
 const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('it-IT', {
   day: 'numeric',
   month: 'long',

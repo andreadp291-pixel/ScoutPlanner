@@ -60,6 +60,11 @@ class ActivityUpdateIn(BaseModel):
     end_at: str | None = None
 
 
+class ActivitySwapIn(BaseModel):
+    id_a: int
+    id_b: int
+
+
 class ActivityOut(BaseModel):
     id: int
     project_id: int

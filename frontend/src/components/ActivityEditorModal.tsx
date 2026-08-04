@@ -42,6 +42,16 @@ export function ActivityEditorModal({
   const [dupDate, setDupDate] = useState(datePart)
   const [dupStart, setDupStart] = useState(startTime)
   const [dupEnd, setDupEnd] = useState(endTime)
+  const [deleteArmed, setDeleteArmed] = useState(false)
+
+  function handleDeleteClick() {
+    if (!onDelete) return
+    if (!deleteArmed) {
+      setDeleteArmed(true)
+      return
+    }
+    onDelete()
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -163,8 +173,13 @@ export function ActivityEditorModal({
             <div className="modal-actions">
               <div className="modal-actions-secondary">
                 {initial && canDelete && onDelete && (
-                  <button type="button" className="danger" onClick={onDelete}>
-                    Elimina
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={handleDeleteClick}
+                    onBlur={() => setDeleteArmed(false)}
+                  >
+                    {deleteArmed ? 'Confermi?' : 'Elimina'}
                   </button>
                 )}
                 {initial && canDelete && onDuplicate && (
