@@ -7,6 +7,7 @@ import {
   PX_PER_MINUTE,
   clampMinutes,
   formatDayLabel,
+  minutesSinceMidnight,
   nowMinutes,
   todayDateString,
 } from './time'
@@ -78,7 +79,26 @@ export function DayColumn({
     if (dragOrigin.current === null) return
     const current = minutesFromPointer(e.clientY)
     const origin = dragOrigin.current
-    setDragPreview({ start: Math.min(origin, current), end: Math.max(origin, current) })
+
+    if (current >= origin) {
+      // trascinamento verso il basso: l'inizio resta fermo, la fine si ferma
+      // in battuta contro l'attività successiva invece di sovrapporla
+      let end = current
+      for (const a of dayActivities) {
+        const aStart = minutesSinceMidnight(a.start_at)
+        if (aStart > origin && aStart < end) end = aStart
+      }
+      setDragPreview({ start: origin, end })
+    } else {
+      // trascinamento verso l'alto: la fine resta ferma, l'inizio si ferma
+      // in battuta contro l'attività precedente
+      let start = current
+      for (const a of dayActivities) {
+        const aEnd = minutesSinceMidnight(a.end_at)
+        if (aEnd < origin && aEnd > start) start = aEnd
+      }
+      setDragPreview({ start, end: origin })
+    }
   }
 
   function handlePointerUp() {
@@ -86,8 +106,13 @@ export function DayColumn({
     const { start } = dragPreview
     let { end } = dragPreview
     if (end - start < 5) {
-      // click semplice, non drag: crea uno slot di durata standard
+      // click semplice, non drag: crea uno slot di durata standard, fermandosi
+      // in battuta contro l'attività successiva se più vicina
       end = clampMinutes(start + DEFAULT_DURATION_MINUTES)
+      for (const a of dayActivities) {
+        const aStart = minutesSinceMidnight(a.start_at)
+        if (aStart > start && aStart < end) end = aStart
+      }
     }
     onRequestCreate(date, start, end)
     dragOrigin.current = null
