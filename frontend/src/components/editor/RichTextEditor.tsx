@@ -80,6 +80,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
   }
 
   function handleImageUrl() {
+    if (!editor) return
     const url = window.prompt('URL immagine')
     if (!url) return
     if (!isSafeUrl(url)) {
@@ -90,6 +91,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
   }
 
   function handleLink() {
+    if (!editor) return
     const previousUrl = editor.getAttributes('link').href as string | undefined
     const url = window.prompt('URL del link', previousUrl ?? 'https://')
     if (url === null) return
@@ -105,6 +107,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
   }
 
   function handlePhone() {
+    if (!editor) return
     const phone = window.prompt('Numero di telefono')
     if (!phone) return
     editor
@@ -122,6 +125,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
   }
 
   function handleLocation() {
+    if (!editor) return
     const place = window.prompt('Nome del luogo o indirizzo')
     if (!place) return
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`
@@ -140,6 +144,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
   }
 
   function handleTable() {
+    if (!editor) return
     editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
   }
 
