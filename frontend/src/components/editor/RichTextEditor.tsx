@@ -9,6 +9,12 @@ import { EditorContent, type JSONContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { useEffect, useRef, useState } from 'react'
 import { uploadFile } from '../../api/uploads'
+import { CompassIcon } from '../icons/CompassIcon'
+import { ImageIcon } from '../icons/ImageIcon'
+import { LinkIcon } from '../icons/LinkIcon'
+import { LocationIcon } from '../icons/LocationIcon'
+import { PhoneIcon } from '../icons/PhoneIcon'
+import { QuoteIcon } from '../icons/QuoteIcon'
 import { GpxAttachment } from './GpxAttachmentExtension'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
 
@@ -123,7 +129,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
       .insertContent([
         {
           type: 'text',
-          text: `📞 ${phone}`,
+          text: phone,
           marks: [{ type: 'link', attrs: { href: `tel:${phone.replace(/\s+/g, '')}` } }],
         },
         { type: 'text', text: ' ' },
@@ -142,7 +148,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
       .insertContent([
         {
           type: 'text',
-          text: `📍 ${picked.name}`,
+          text: picked.name,
           marks: [{ type: 'link', attrs: { href: mapsUrl, target: '_blank', rel: 'noopener noreferrer' } }],
         },
         { type: 'text', text: ' ' },
@@ -198,32 +204,32 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
             1. Elenco
           </button>
           <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={editor.isActive('blockquote') ? 'active' : ''} title="Citazione">
-            ❝ Citazione
+            <QuoteIcon /> Citazione
           </button>
           <button type="button" onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Linea divisoria">
             ―
           </button>
           <span className="rich-editor-sep" />
           <button type="button" onClick={handleLink} className={editor.isActive('link') ? 'active' : ''} title="Inserisci link">
-            🔗 Link
+            <LinkIcon /> Link
           </button>
           <button type="button" onClick={() => imageInputRef.current?.click()} title="Carica immagine">
-            🖼 Immagine
+            <ImageIcon /> Immagine
           </button>
           <button type="button" onClick={handleImageUrl} title="Immagine da URL">
-            🖼 Da URL
+            <ImageIcon /> Da URL
           </button>
           <button type="button" onClick={handleTable} title="Inserisci tabella">
             ▦ Tabella
           </button>
           <button type="button" onClick={handlePhone} title="Numero di telefono">
-            📞 Telefono
+            <PhoneIcon /> Telefono
           </button>
           <button type="button" onClick={() => setShowLocationPicker(true)} title="Posizione">
-            📍 Posizione
+            <LocationIcon /> Posizione
           </button>
           <button type="button" onClick={() => gpxInputRef.current?.click()} title="Carica traccia GPX">
-            🧭 GPX
+            <CompassIcon /> GPX
           </button>
           <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageFile} style={{ display: 'none' }} />
           <input ref={gpxInputRef} type="file" accept=".gpx" onChange={handleGpxFile} style={{ display: 'none' }} />

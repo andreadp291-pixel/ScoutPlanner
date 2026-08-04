@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { MapContainer, Polyline, TileLayer } from 'react-leaflet'
 import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
 import '../../lib/leafletIconFix'
+import { CompassIcon } from '../icons/CompassIcon'
 
 function ElevationProfile({ profile }: { profile: GpxStats['profile'] }) {
   if (profile.length < 2) return null
@@ -72,17 +73,16 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
     }
   }, [url])
 
-  const trackPoints: [number, number][] =
-    stats && stats.points.length > 0
-      ? downsample(stats.points, 1500).map((p): [number, number] => [p.lat, p.lon])
-      : []
-  const bounds = trackPoints.length > 0 ? computeBounds(trackPoints) : null
+  const trackSegments: [number, number][][] =
+    stats?.segments.map((seg) => downsample(seg, 1500).map((p): [number, number] => [p.lat, p.lon])) ?? []
+  const allTrackPoints = trackSegments.flat()
+  const bounds = allTrackPoints.length > 0 ? computeBounds(allTrackPoints) : null
 
   return (
     <NodeViewWrapper className="gpx-card">
       <div className="gpx-card-header">
         <a href={url} download={filename} className="gpx-attachment-link">
-          🧭 {filename}
+          <CompassIcon /> {filename}
         </a>
       </div>
       {error && <p className="muted">{error}</p>}
@@ -92,7 +92,7 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
           <div className="gpx-map-wrap">
             <MapContainer
               bounds={bounds}
-              center={trackPoints[0]}
+              center={allTrackPoints[0]}
               zoom={13}
               style={{ height: 260, width: '100%' }}
               scrollWheelZoom={false}
@@ -101,7 +101,9 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <Polyline positions={trackPoints} pathOptions={{ color: '#c0392b', weight: 3 }} />
+              {trackSegments.map((segment, i) => (
+                <Polyline key={i} positions={segment} pathOptions={{ color: '#c0392b', weight: 3 }} />
+              ))}
             </MapContainer>
           </div>
           <div className="gpx-stats-strip">

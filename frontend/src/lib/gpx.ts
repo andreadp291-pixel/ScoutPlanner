@@ -12,6 +12,7 @@ export interface GpxStats {
   minAltitudeM: number | null
   profile: { km: number; ele: number }[]
   points: GpxPoint[]
+  segments: GpxPoint[][]
 }
 
 function haversineMeters(a: GpxPoint, b: GpxPoint): number {
@@ -33,37 +34,53 @@ export function downsample<T>(arr: T[], maxPoints: number): T[] {
   return out
 }
 
+function parsePoint(el: Element): GpxPoint {
+  const lat = parseFloat(el.getAttribute('lat') ?? '0')
+  const lon = parseFloat(el.getAttribute('lon') ?? '0')
+  const eleEl = el.getElementsByTagName('ele')[0]
+  const ele = eleEl ? parseFloat(eleEl.textContent ?? '') : NaN
+  return { lat, lon, ele: Number.isFinite(ele) ? ele : null }
+}
+
 export function parseGpx(xmlText: string): GpxStats {
   const doc = new DOMParser().parseFromString(xmlText, 'application/xml')
-  const trkpts = Array.from(doc.getElementsByTagName('trkpt'))
-  const source = trkpts.length > 0 ? trkpts : Array.from(doc.getElementsByTagName('rtept'))
+  const trksegs = Array.from(doc.getElementsByTagName('trkseg'))
 
-  const points: GpxPoint[] = source.map((el) => {
-    const lat = parseFloat(el.getAttribute('lat') ?? '0')
-    const lon = parseFloat(el.getAttribute('lon') ?? '0')
-    const eleEl = el.getElementsByTagName('ele')[0]
-    const ele = eleEl ? parseFloat(eleEl.textContent ?? '') : NaN
-    return { lat, lon, ele: Number.isFinite(ele) ? ele : null }
-  })
+  // Un GPX può avere più <trkseg> (es. per pause durante la registrazione):
+  // vanno tenuti come tratti separati, altrimenti si crea una linea retta
+  // spuria tra l'ultimo punto di un segmento e il primo del successivo.
+  let segments: GpxPoint[][] = trksegs.map((seg) =>
+    Array.from(seg.getElementsByTagName('trkpt')).map(parsePoint),
+  )
+  if (segments.length === 0) {
+    const trkpts = Array.from(doc.getElementsByTagName('trkpt'))
+    const source = trkpts.length > 0 ? trkpts : Array.from(doc.getElementsByTagName('rtept'))
+    segments = source.length > 0 ? [source.map(parsePoint)] : []
+  }
+  segments = segments.filter((s) => s.length > 0)
 
   let cumKm = 0
   let elevationGainM = 0
   let elevationLossM = 0
   const profile: { km: number; ele: number }[] = []
+  const points: GpxPoint[] = []
 
-  for (let i = 0; i < points.length; i++) {
-    if (i > 0) {
-      cumKm += haversineMeters(points[i - 1], points[i]) / 1000
-      const eleA = points[i - 1].ele
-      const eleB = points[i].ele
-      if (eleA !== null && eleB !== null) {
-        const delta = eleB - eleA
-        if (delta > 0) elevationGainM += delta
-        else elevationLossM += -delta
+  for (const segment of segments) {
+    for (let i = 0; i < segment.length; i++) {
+      const point = segment[i]
+      points.push(point)
+      if (i > 0) {
+        cumKm += haversineMeters(segment[i - 1], point) / 1000
+        const eleA = segment[i - 1].ele
+        const eleB = point.ele
+        if (eleA !== null && eleB !== null) {
+          const delta = eleB - eleA
+          if (delta > 0) elevationGainM += delta
+          else elevationLossM += -delta
+        }
       }
+      if (point.ele !== null) profile.push({ km: cumKm, ele: point.ele })
     }
-    const ele = points[i].ele
-    if (ele !== null) profile.push({ km: cumKm, ele })
   }
 
   let maxAltitudeM: number | null = null
@@ -82,5 +99,6 @@ export function parseGpx(xmlText: string): GpxStats {
     minAltitudeM,
     profile: downsample(profile, 200),
     points,
+    segments,
   }
 }

@@ -54,7 +54,7 @@ export const GpxAttachment = Node.create({
           target: '_blank',
           rel: 'noopener noreferrer',
         },
-        `🧭  ${filename}`,
+        filename,
       ],
     ]
   },

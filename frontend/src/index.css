@@ -733,6 +733,9 @@ code {
   z-index: 10;
 }
 .rich-editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 6px 10px;
   font-size: 13px;
   border: 1px solid transparent;
