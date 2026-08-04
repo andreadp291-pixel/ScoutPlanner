@@ -24,6 +24,24 @@ export function toIsoDatetime(date: string, minutes: number): string {
   return `${date}T${minutesToHHMM(clampMinutes(minutes))}`
 }
 
+function toDateString(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export function dateRange(start: string, end: string): string[] {
+  const dates: string[] = []
+  const cursor = new Date(start + 'T00:00:00')
+  const last = new Date(end + 'T00:00:00')
+  while (cursor <= last) {
+    dates.push(toDateString(cursor))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return dates
+}
+
 const DAY_LABEL_FORMATTER = new Intl.DateTimeFormat('it-IT', {
   weekday: 'long',
   day: 'numeric',
@@ -56,4 +74,15 @@ const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('it-IT', {
 
 export function formatShortDate(date: string): string {
   return SHORT_DATE_FORMATTER.format(new Date(`${date}T00:00:00`))
+}
+
+const CHIP_DATE_FORMATTER = new Intl.DateTimeFormat('it-IT', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+})
+
+export function formatChipLabel(date: string): string {
+  const label = CHIP_DATE_FORMATTER.format(new Date(`${date}T00:00:00`))
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   inviteMember,
   listMembers,
   removeMember,
   resetMemberPassword,
 } from '../api/members'
+import { deleteProject, getProjectAccess } from '../api/projects'
 import {
   createToken,
   listTokens,
@@ -15,6 +16,7 @@ import {
   type ProjectTokenCreated,
 } from '../api/tokens'
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
+import { TrashIcon } from '../components/icons/TrashIcon'
 
 function shareUrlFor(projectId: number, rawToken: string): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}#/projects/${projectId}?t=${rawToken}`
@@ -24,7 +26,9 @@ export function ProjectTokens() {
   const { projectId } = useParams()
   const id = Number(projectId)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
+  const accessQuery = useQuery({ queryKey: ['access', id], queryFn: () => getProjectAccess(id) })
   const membersQuery = useQuery({ queryKey: ['members', id], queryFn: () => listMembers(id) })
   const tokensQuery = useQuery({ queryKey: ['tokens', id], queryFn: () => listTokens(id) })
 
@@ -33,6 +37,7 @@ export function ProjectTokens() {
   const [role, setRole] = useState<'editor' | 'viewer'>('editor')
   const [revealedLink, setRevealedLink] = useState<ProjectTokenCreated | null>(null)
   const [inviteNotice, setInviteNotice] = useState<string | null>(null)
+  const [deleteArmed, setDeleteArmed] = useState(false)
 
   const invalidateMembers = () => queryClient.invalidateQueries({ queryKey: ['members', id] })
   const invalidateTokens = () => queryClient.invalidateQueries({ queryKey: ['tokens', id] })
@@ -82,6 +87,12 @@ export function ProjectTokens() {
     onSuccess: () => invalidateTokens(),
   })
 
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => deleteProject(id),
+    onSuccess: () => navigate('/projects', { replace: true }),
+    onError: (err) => alert(err instanceof Error ? err.message : "Errore durante l'eliminazione"),
+  })
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setInviteNotice(null)
@@ -92,6 +103,16 @@ export function ProjectTokens() {
       createTokenMutation.mutate()
     }
   }
+
+  function handleDeleteProjectClick() {
+    if (!deleteArmed) {
+      setDeleteArmed(true)
+      return
+    }
+    deleteProjectMutation.mutate()
+  }
+
+  const isOwner = accessQuery.data?.role === 'owner'
 
   const isPending = inviteMemberMutation.isPending || createTokenMutation.isPending
 
@@ -147,6 +168,7 @@ export function ProjectTokens() {
       </form>
 
       <h2>Persone con account (email + password)</h2>
+      <div className="table-scroll">
       <table className="tokens-table">
         <thead>
           <tr>
@@ -185,9 +207,11 @@ export function ProjectTokens() {
           ))}
         </tbody>
       </table>
+      </div>
       {membersQuery.data?.length === 0 && <p className="muted">Nessuna persona con account ancora.</p>}
 
       <h2 style={{ marginTop: 28 }}>Link anonimi (senza email)</h2>
+      <div className="table-scroll">
       <table className="tokens-table">
         <thead>
           <tr>
@@ -226,7 +250,28 @@ export function ProjectTokens() {
           ))}
         </tbody>
       </table>
+      </div>
       {tokensQuery.data?.length === 0 && <p className="muted">Nessun link anonimo ancora.</p>}
+
+      {isOwner && (
+        <div className="card danger-zone" style={{ marginTop: 28 }}>
+          <h2>Zona pericolosa</h2>
+          <p className="muted" style={{ marginBottom: 14 }}>
+            Elimina definitivamente questo progetto, tutte le attività, le persone invitate e i link
+            anonimi associati. L'operazione non è reversibile.
+          </p>
+          <button
+            type="button"
+            className="danger"
+            onClick={handleDeleteProjectClick}
+            onBlur={() => setDeleteArmed(false)}
+            disabled={deleteProjectMutation.isPending}
+          >
+            <TrashIcon />
+            {deleteArmed ? 'Confermi l\'eliminazione?' : 'Elimina progetto'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

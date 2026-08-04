@@ -14,30 +14,12 @@ import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
-import { formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
+import { dateRange, formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
 import { DownloadIcon } from '../components/icons/DownloadIcon'
 import { ShareIcon } from '../components/icons/ShareIcon'
 import { UploadIcon } from '../components/icons/UploadIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
-
-function toDateString(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function dateRange(start: string, end: string): string[] {
-  const dates: string[] = []
-  const cursor = new Date(start + 'T00:00:00')
-  const last = new Date(end + 'T00:00:00')
-  while (cursor <= last) {
-    dates.push(toDateString(cursor))
-    cursor.setDate(cursor.getDate() + 1)
-  }
-  return dates
-}
 
 type EditorState =
   | { mode: 'create'; date: string; startAt: string; endAt: string }
@@ -112,6 +94,17 @@ export function ProjectCalendar() {
     onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante l\'eliminazione'),
   })
 
+  const duplicateMutation = useMutation({
+    mutationFn: async (entries: ActivityInput[]) => {
+      for (const input of entries) await createActivity(id, input)
+    },
+    onSuccess: () => {
+      invalidateActivities()
+      setEditorState(null)
+    },
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante la duplicazione'),
+  })
+
   const swapMutation = useMutation({
     mutationFn: ({ idA, idB }: { idA: number; idB: number }) => swapActivities(id, idA, idB),
     onSuccess: invalidateActivities,
@@ -169,14 +162,22 @@ export function ProjectCalendar() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
         <div>
           <h1 style={{ marginBottom: 4 }}>{project.name}</h1>
           <p className="muted">
             {formatShortDate(project.start_date)} → {formatShortDate(project.end_date)}
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" onClick={handleExport}>
             <DownloadIcon />
             Esporta
@@ -278,17 +279,19 @@ export function ProjectCalendar() {
           }
           onDuplicate={
             editorState.mode === 'edit'
-              ? (startAt, endAt) => {
+              ? (entries) => {
                   const a = editorState.activity
-                  createMutation.mutate({
-                    title: a.title,
-                    description: a.description,
-                    location: a.location,
-                    category: a.category,
-                    color: a.color,
-                    start_at: startAt,
-                    end_at: endAt,
-                  })
+                  duplicateMutation.mutate(
+                    entries.map(({ startAt, endAt }) => ({
+                      title: a.title,
+                      description: a.description,
+                      location: a.location,
+                      category: a.category,
+                      color: a.color,
+                      start_at: startAt,
+                      end_at: endAt,
+                    })),
+                  )
                 }
               : undefined
           }

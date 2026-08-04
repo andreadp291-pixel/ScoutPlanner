@@ -1,19 +1,25 @@
 import { useState } from 'react'
 import type { Activity, ActivityInput } from '../api/activities'
+import { dateRange, formatChipLabel } from './calendar/time'
 
 const DEFAULT_COLOR = '#3b82f6'
+
+export interface DuplicateEntry {
+  startAt: string
+  endAt: string
+}
 
 interface ActivityEditorModalProps {
   date: string // 'YYYY-MM-DD' del giorno su cui si sta operando
   initial?: Activity // presente = modifica, assente = creazione
   defaultStartAt?: string // ISO datetime usato in creazione
   defaultEndAt?: string
-  projectStartDate: string // 'YYYY-MM-DD', per limitare il picker di duplicazione
+  projectStartDate: string // 'YYYY-MM-DD', per limitare la selezione dei giorni di duplicazione
   projectEndDate: string
   canDelete: boolean
   onSave: (input: ActivityInput) => void
   onDelete?: () => void
-  onDuplicate?: (startAt: string, endAt: string) => void
+  onDuplicate?: (entries: DuplicateEntry[]) => void
   onClose: () => void
 }
 
@@ -39,10 +45,21 @@ export function ActivityEditorModal({
   const datePart = (initial?.start_at ?? defaultStartAt ?? '').slice(0, 10)
 
   const [showDuplicate, setShowDuplicate] = useState(false)
-  const [dupDate, setDupDate] = useState(datePart)
+  const [dupDates, setDupDates] = useState<Set<string>>(() => new Set())
   const [dupStart, setDupStart] = useState(startTime)
   const [dupEnd, setDupEnd] = useState(endTime)
   const [deleteArmed, setDeleteArmed] = useState(false)
+
+  const projectDays = dateRange(projectStartDate, projectEndDate)
+
+  function toggleDupDate(d: string) {
+    setDupDates((prev) => {
+      const next = new Set(prev)
+      if (next.has(d)) next.delete(d)
+      else next.add(d)
+      return next
+    })
+  }
 
   function handleDeleteClick() {
     if (!onDelete) return
@@ -67,8 +84,15 @@ export function ActivityEditorModal({
   }
 
   function handleConfirmDuplicate() {
-    if (!onDuplicate) return
-    onDuplicate(`${dupDate}T${dupStart}`, `${dupDate}T${dupEnd}`)
+    if (!onDuplicate || dupDates.size === 0) return
+    onDuplicate(
+      [...dupDates].map((d) => ({ startAt: `${d}T${dupStart}`, endAt: `${d}T${dupEnd}` })),
+    )
+  }
+
+  function openDuplicatePanel() {
+    setDupDates(new Set(datePart ? [datePart] : []))
+    setShowDuplicate(true)
   }
 
   return (
@@ -123,19 +147,20 @@ export function ActivityEditorModal({
           {showDuplicate && (
             <div className="duplicate-panel">
               <p className="muted" style={{ marginBottom: 10 }}>
-                Scegli giorno e orario per la copia
+                Scegli uno o più giorni e l'orario per le copie
               </p>
-              <label>
-                Giorno
-                <input
-                  type="date"
-                  required
-                  min={projectStartDate}
-                  max={projectEndDate}
-                  value={dupDate}
-                  onChange={(e) => setDupDate(e.target.value)}
-                />
-              </label>
+              <div className="day-chip-row">
+                {projectDays.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`day-chip${dupDates.has(d) ? ' selected' : ''}`}
+                    onClick={() => toggleDupDate(d)}
+                  >
+                    {formatChipLabel(d)}
+                  </button>
+                ))}
+              </div>
               <div className="time-range">
                 <label>
                   Inizio
@@ -162,8 +187,13 @@ export function ActivityEditorModal({
                 <button type="button" onClick={() => setShowDuplicate(false)}>
                   Annulla
                 </button>
-                <button type="button" className="primary" onClick={handleConfirmDuplicate}>
-                  Duplica qui
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={handleConfirmDuplicate}
+                  disabled={dupDates.size === 0}
+                >
+                  {dupDates.size > 1 ? `Duplica su ${dupDates.size} giorni` : 'Duplica qui'}
                 </button>
               </div>
             </div>
@@ -183,7 +213,7 @@ export function ActivityEditorModal({
                   </button>
                 )}
                 {initial && canDelete && onDuplicate && (
-                  <button type="button" onClick={() => setShowDuplicate(true)}>
+                  <button type="button" onClick={openDuplicatePanel}>
                     Duplica
                   </button>
                 )}

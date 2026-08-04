@@ -29,3 +29,7 @@ export interface ProjectAccess {
 export function getProjectAccess(projectId: number) {
   return apiFetch<ProjectAccess>(`/projects/${projectId}/access`, { projectId })
 }
+
+export function deleteProject(projectId: number) {
+  return apiFetch<void>(`/projects/${projectId}`, { method: 'DELETE', projectId })
+}
