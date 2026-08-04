@@ -108,8 +108,6 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
           <div className="gpx-map-wrap">
             <MapContainer
               bounds={bounds}
-              center={allTrackPoints[0]}
-              zoom={13}
               style={{ height: 260, width: '100%' }}
               scrollWheelZoom={false}
             >
