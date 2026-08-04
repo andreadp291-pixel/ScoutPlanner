@@ -121,6 +121,7 @@ async def update_activity(
     activity_id: int, body: ActivityUpdateIn, actor: Actor = Depends(require_project_role("editor"))
 ):
     fields = body.model_dump(exclude_unset=True)
+    group_ids = fields.pop("group_ids", None)
     with get_conn() as conn:
         current = conn.execute(
             "SELECT * FROM activities WHERE id = ? AND project_id = ?", (activity_id, actor.project_id)
@@ -138,10 +139,12 @@ async def update_activity(
                 f"UPDATE activities SET {', '.join(set_parts)} WHERE id = ? AND project_id = ?",
                 values,
             )
+        if group_ids is not None:
+            _set_activity_groups(conn, actor.project_id, activity_id, group_ids)
         row = conn.execute(
             "SELECT * FROM activities WHERE id = ? AND project_id = ?", (activity_id, actor.project_id)
         ).fetchone()
-    return dict(row)
+        return _activity_out(conn, row)
 
 
 @router.delete("/{activity_id}", status_code=204)
