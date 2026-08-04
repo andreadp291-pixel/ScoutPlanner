@@ -1,9 +1,25 @@
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { useEffect, useState } from 'react'
-import { MapContainer, Polyline, TileLayer } from 'react-leaflet'
+import { MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
 import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
 import '../../lib/leafletIconFix'
 import { CompassIcon } from '../icons/CompassIcon'
+
+// Il NodeView di TipTap può montare la mappa prima che il layout della pagina
+// (font, colonne, contenuto circostante) si sia stabilizzato: Leaflet calcola
+// tile e traccia in base alla dimensione del contenitore nell'istante del
+// montaggio, e se questa cambia subito dopo il risultato appare disallineato.
+function MapSizeFix({ bounds }: { bounds: [[number, number], [number, number]] }) {
+  const map = useMap()
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize()
+      map.fitBounds(bounds)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [map, bounds])
+  return null
+}
 
 function ElevationProfile({ profile }: { profile: GpxStats['profile'] }) {
   if (profile.length < 2) return null
@@ -104,6 +120,7 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
               {trackSegments.map((segment, i) => (
                 <Polyline key={i} positions={segment} pathOptions={{ color: '#c0392b', weight: 3 }} />
               ))}
+              <MapSizeFix bounds={bounds} />
             </MapContainer>
           </div>
           <div className="gpx-stats-strip">

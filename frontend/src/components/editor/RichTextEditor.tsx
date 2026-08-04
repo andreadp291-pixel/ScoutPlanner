@@ -16,6 +16,7 @@ import { LocationIcon } from '../icons/LocationIcon'
 import { PhoneIcon } from '../icons/PhoneIcon'
 import { QuoteIcon } from '../icons/QuoteIcon'
 import { GpxAttachment } from './GpxAttachmentExtension'
+import { GpxChoiceModal } from './GpxChoiceModal'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
 
 interface RichTextEditorProps {
@@ -31,6 +32,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
   const imageInputRef = useRef<HTMLInputElement>(null)
   const gpxInputRef = useRef<HTMLInputElement>(null)
   const [showLocationPicker, setShowLocationPicker] = useState(false)
+  const [showGpxChoice, setShowGpxChoice] = useState(false)
 
   const editor = useEditor({
     extensions: [
@@ -228,7 +230,7 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
           <button type="button" onClick={() => setShowLocationPicker(true)} title="Posizione">
             <LocationIcon /> Posizione
           </button>
-          <button type="button" onClick={() => gpxInputRef.current?.click()} title="Carica traccia GPX">
+          <button type="button" onClick={() => setShowGpxChoice(true)} title="Traccia GPX">
             <CompassIcon /> GPX
           </button>
           <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageFile} style={{ display: 'none' }} />
@@ -240,6 +242,15 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
         <LocationPickerModal
           onConfirm={handleLocationConfirm}
           onClose={() => setShowLocationPicker(false)}
+        />
+      )}
+      {showGpxChoice && (
+        <GpxChoiceModal
+          onUpload={() => {
+            setShowGpxChoice(false)
+            gpxInputRef.current?.click()
+          }}
+          onClose={() => setShowGpxChoice(false)}
         />
       )}
     </div>

@@ -972,6 +972,19 @@ code {
   position: relative;
   z-index: 0;
 }
+.leaflet-bar a {
+  border-bottom: none !important;
+}
+
+.gpx-choice-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.gpx-choice-row button {
+  justify-content: center;
+}
 
 /* --- editor edit/preview tabs --- */
 .editor-mode-tabs {
