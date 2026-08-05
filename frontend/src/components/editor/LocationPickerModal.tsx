@@ -2,6 +2,23 @@ import type { LatLng } from 'leaflet'
 import { useEffect, useState } from 'react'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import '../../lib/leafletIconFix'
+import { PlusIcon } from '../icons/PlusIcon'
+
+// Controllo zoom nostro, non quello di default di Leaflet: evita qualsiasi
+// interferenza dal CSS che Leaflet applica ai suoi controlli integrati.
+function ZoomControl() {
+  const map = useMap()
+  return (
+    <div className="map-zoom-control">
+      <button type="button" onClick={() => map.zoomIn()} aria-label="Aumenta zoom">
+        <PlusIcon size={14} />
+      </button>
+      <button type="button" onClick={() => map.zoomOut()} aria-label="Riduci zoom">
+        <span className="map-zoom-minus" />
+      </button>
+    </div>
+  )
+}
 
 export interface PickedLocation {
   name: string
@@ -118,13 +135,14 @@ export function LocationPickerModal({ onConfirm, onClose }: LocationPickerModalP
           </ul>
         )}
         <div className="location-map-wrap">
-          <MapContainer center={center} zoom={zoom} style={{ height: 320, width: '100%' }}>
+          <MapContainer center={center} zoom={zoom} style={{ height: 320, width: '100%' }} zoomControl={false}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <RecenterOnChange center={center} zoom={zoom} />
             <MapSizeFix />
+            <ZoomControl />
             <ClickCatcher onPick={pickFromMap} />
             {selected && <Marker position={[selected.lat, selected.lon]} />}
           </MapContainer>

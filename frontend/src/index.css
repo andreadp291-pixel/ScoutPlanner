@@ -972,14 +972,40 @@ code {
   position: relative;
   z-index: 0;
 }
-.leaflet-bar,
-.leaflet-bar a {
-  box-shadow: none !important;
-  border: none !important;
-  outline: none !important;
+
+/* Controllo zoom nostro (sostituisce quello di default di Leaflet). */
+.map-zoom-control {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
-.leaflet-control-zoom-in {
-  margin-bottom: 2px !important;
+.map-zoom-control button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-h);
+  cursor: pointer;
+}
+.map-zoom-control button:hover {
+  background: var(--bg-alt);
+}
+.map-zoom-minus {
+  width: 10px;
+  height: 1.8px;
+  background: currentColor;
+  border-radius: 1px;
 }
 
 .gpx-choice-row {

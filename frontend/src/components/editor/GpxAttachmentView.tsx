@@ -4,13 +4,32 @@ import { MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
 import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
 import '../../lib/leafletIconFix'
 import { CompassIcon } from '../icons/CompassIcon'
+import { PlusIcon } from '../icons/PlusIcon'
+
+type LatLon = [number, number]
+type Bounds = [LatLon, LatLon]
+
+// Controllo zoom nostro, non quello di default di Leaflet: evita qualsiasi
+// interferenza dal CSS che Leaflet applica ai suoi controlli integrati.
+function ZoomControl() {
+  const map = useMap()
+  return (
+    <div className="map-zoom-control">
+      <button type="button" onClick={() => map.zoomIn()} aria-label="Aumenta zoom">
+        <PlusIcon size={14} />
+      </button>
+      <button type="button" onClick={() => map.zoomOut()} aria-label="Riduci zoom">
+        <span className="map-zoom-minus" />
+      </button>
+    </div>
+  )
+}
 
 // Il NodeView di TipTap può montare la mappa prima che il layout della pagina
-// (font, colonne, contenuto circostante) si sia stabilizzato. invalidateSize()
-// è l'API di Leaflet pensata apposta per questo: ricalcola la dimensione senza
-// rifare fitBounds (che rieseguito a freddo può disallineare temporaneamente
-// tile e traccia vettoriale finché non si ridisegnano insieme).
-function MapSizeFix() {
+// si sia stabilizzato del tutto: invalidateSize() la corregge senza dover
+// rifare fitBounds (che, rieseguito a freddo, disallinea temporaneamente
+// tile e traccia finché non si ridisegnano insieme).
+function MapReadyFix() {
   const map = useMap()
   useEffect(() => {
     const timer = setTimeout(() => map.invalidateSize(), 250)
@@ -47,7 +66,7 @@ function ElevationProfile({ profile }: { profile: GpxStats['profile'] }) {
   )
 }
 
-function computeBounds(points: [number, number][]): [[number, number], [number, number]] {
+function computeBounds(points: LatLon[]): Bounds {
   let minLat = points[0][0]
   let maxLat = points[0][0]
   let minLon = points[0][1]
@@ -64,9 +83,7 @@ function computeBounds(points: [number, number][]): [[number, number], [number, 
   ]
 }
 
-export function GpxAttachmentView({ node }: NodeViewProps) {
-  const url = node.attrs.url as string
-  const filename = node.attrs.filename as string
+function useGpxStats(url: string) {
   const [stats, setStats] = useState<GpxStats | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -87,10 +104,42 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
     }
   }, [url])
 
-  const trackSegments: [number, number][][] =
-    stats?.segments.map((seg) => downsample(seg, 1500).map((p): [number, number] => [p.lat, p.lon])) ?? []
-  const allTrackPoints = trackSegments.flat()
-  const bounds = allTrackPoints.length > 0 ? computeBounds(allTrackPoints) : null
+  return { stats, error }
+}
+
+function GpxStatsStrip({ stats }: { stats: GpxStats }) {
+  return (
+    <div className="gpx-stats-strip">
+      <div className="gpx-stat">
+        <span className="gpx-stat-value">{stats.distanceKm.toFixed(1)} km</span>
+        <span className="gpx-stat-label">Distanza</span>
+      </div>
+      <div className="gpx-stat">
+        <span className="gpx-stat-value">+{Math.round(stats.elevationGainM)} m</span>
+        <span className="gpx-stat-label">Salita</span>
+      </div>
+      <div className="gpx-stat">
+        <span className="gpx-stat-value">-{Math.round(stats.elevationLossM)} m</span>
+        <span className="gpx-stat-label">Discesa</span>
+      </div>
+      {stats.maxAltitudeM !== null && (
+        <div className="gpx-stat">
+          <span className="gpx-stat-value">{Math.round(stats.maxAltitudeM)} m</span>
+          <span className="gpx-stat-label">Quota max</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function GpxAttachmentView({ node }: NodeViewProps) {
+  const url = node.attrs.url as string
+  const filename = node.attrs.filename as string
+  const { stats, error } = useGpxStats(url)
+
+  const segments: LatLon[][] =
+    stats?.segments.map((seg) => downsample(seg, 1500).map((p): LatLon => [p.lat, p.lon])) ?? []
+  const bounds = segments.length > 0 ? computeBounds(segments.flat()) : null
 
   return (
     <NodeViewWrapper className="gpx-card">
@@ -104,41 +153,19 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
       {stats && bounds && (
         <>
           <div className="gpx-map-wrap">
-            <MapContainer
-              bounds={bounds}
-              style={{ height: 260, width: '100%' }}
-              scrollWheelZoom={false}
-            >
+            <MapContainer bounds={bounds} style={{ height: 260, width: '100%' }} scrollWheelZoom={false} zoomControl={false}>
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              {trackSegments.map((segment, i) => (
+              {segments.map((segment, i) => (
                 <Polyline key={i} positions={segment} pathOptions={{ color: '#c0392b', weight: 3 }} />
               ))}
-              <MapSizeFix />
+              <ZoomControl />
+              <MapReadyFix />
             </MapContainer>
           </div>
-          <div className="gpx-stats-strip">
-            <div className="gpx-stat">
-              <span className="gpx-stat-value">{stats.distanceKm.toFixed(1)} km</span>
-              <span className="gpx-stat-label">Distanza</span>
-            </div>
-            <div className="gpx-stat">
-              <span className="gpx-stat-value">+{Math.round(stats.elevationGainM)} m</span>
-              <span className="gpx-stat-label">Salita</span>
-            </div>
-            <div className="gpx-stat">
-              <span className="gpx-stat-value">-{Math.round(stats.elevationLossM)} m</span>
-              <span className="gpx-stat-label">Discesa</span>
-            </div>
-            {stats.maxAltitudeM !== null && (
-              <div className="gpx-stat">
-                <span className="gpx-stat-value">{Math.round(stats.maxAltitudeM)} m</span>
-                <span className="gpx-stat-label">Quota max</span>
-              </div>
-            )}
-          </div>
+          <GpxStatsStrip stats={stats} />
           <ElevationProfile profile={stats.profile} />
         </>
       )}
