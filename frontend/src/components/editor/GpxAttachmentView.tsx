@@ -152,7 +152,11 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
       {!error && !stats && <p className="muted">Caricamento traccia…</p>}
       {stats && bounds && (
         <>
-          <div className="gpx-map-wrap">
+          <div
+            className="gpx-map-wrap"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+          >
             <MapContainer bounds={bounds} style={{ height: 260, width: '100%' }} scrollWheelZoom={false} zoomControl={false}>
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
