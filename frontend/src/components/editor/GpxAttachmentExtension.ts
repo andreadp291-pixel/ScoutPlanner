@@ -19,7 +19,6 @@ export const GpxAttachment = Node.create({
   name: 'gpxAttachment',
   group: 'block',
   atom: true,
-  draggable: true,
 
   addAttributes() {
     return {
