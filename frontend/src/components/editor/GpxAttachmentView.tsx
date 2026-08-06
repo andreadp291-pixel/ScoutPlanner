@@ -1,6 +1,6 @@
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { useEffect, useState } from 'react'
-import { MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
 import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
 import '../../lib/leafletIconFix'
 import { CompassIcon } from '../icons/CompassIcon'
@@ -20,6 +20,19 @@ function ZoomControl() {
       </button>
       <button type="button" onClick={() => map.zoomOut()} aria-label="Riduci zoom">
         <span className="map-zoom-minus" />
+      </button>
+    </div>
+  )
+}
+
+// Riporta la mappa a inquadrare tutto il percorso, utile dopo aver
+// trascinato/zoomato per esplorare i dettagli.
+function FitBoundsControl({ bounds }: { bounds: Bounds }) {
+  const map = useMap()
+  return (
+    <div className="map-zoom-control map-fit-control">
+      <button type="button" onClick={() => map.fitBounds(bounds, { padding: [20, 20] })} aria-label="Inquadra tutto il percorso" title="Inquadra tutto il percorso">
+        <CompassIcon size={14} />
       </button>
     </div>
   )
@@ -139,7 +152,10 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
 
   const segments: LatLon[][] =
     stats?.segments.map((seg) => downsample(seg, 1500).map((p): LatLon => [p.lat, p.lon])) ?? []
-  const bounds = segments.length > 0 ? computeBounds(segments.flat()) : null
+  const allPoints = segments.flat()
+  const bounds = allPoints.length > 0 ? computeBounds(allPoints) : null
+  const start = allPoints[0]
+  const end = allPoints[allPoints.length - 1]
 
   return (
     <NodeViewWrapper className="gpx-card">
@@ -153,15 +169,36 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
       {stats && bounds && (
         <>
           <div className="gpx-map-wrap">
-            <MapContainer bounds={bounds} style={{ height: 260, width: '100%' }} scrollWheelZoom={false} zoomControl={false}>
+            <MapContainer
+              bounds={bounds}
+              boundsOptions={{ padding: [20, 20] }}
+              style={{ height: 320, width: '100%' }}
+              scrollWheelZoom={false}
+              zoomControl={false}
+            >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {segments.map((segment, i) => (
-                <Polyline key={i} positions={segment} pathOptions={{ color: '#c0392b', weight: 3 }} />
+                <Polyline key={i} positions={segment} pathOptions={{ color: '#c0392b', weight: 2 }} />
               ))}
+              {start && (
+                <CircleMarker
+                  center={start}
+                  radius={5}
+                  pathOptions={{ color: '#fff', weight: 2, fillColor: '#2e8b57', fillOpacity: 1 }}
+                />
+              )}
+              {end && (
+                <CircleMarker
+                  center={end}
+                  radius={5}
+                  pathOptions={{ color: '#fff', weight: 2, fillColor: '#c0392b', fillOpacity: 1 }}
+                />
+              )}
               <ZoomControl />
+              <FitBoundsControl bounds={bounds} />
               <MapReadyFix />
             </MapContainer>
           </div>

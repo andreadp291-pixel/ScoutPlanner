@@ -1001,6 +1001,10 @@ code {
 .map-zoom-control button:hover {
   background: var(--bg-alt);
 }
+.map-fit-control {
+  top: auto;
+  bottom: 10px;
+}
 .map-zoom-minus {
   width: 10px;
   height: 1.8px;
