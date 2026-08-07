@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PoiInput, PoiKind } from '../api/pois'
+import type { Poi, PoiInput, PoiKind } from '../api/pois'
 import { LocationPickerModal, type PickedLocation } from './editor/LocationPickerModal'
 import { LocationIcon } from './icons/LocationIcon'
 
@@ -11,17 +11,23 @@ const KIND_LABELS: Record<PoiKind, string> = {
 }
 
 interface PoiFormModalProps {
+  initial?: Poi
   onSave: (input: PoiInput) => void
   onClose: () => void
 }
 
-export function PoiFormModal({ onSave, onClose }: PoiFormModalProps) {
-  const [kind, setKind] = useState<PoiKind>('hospital')
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
-  const [notes, setNotes] = useState('')
-  const [position, setPosition] = useState<PickedLocation | null>(null)
+export function PoiFormModal({ initial, onSave, onClose }: PoiFormModalProps) {
+  const [kind, setKind] = useState<PoiKind>(initial?.kind ?? 'hospital')
+  const [name, setName] = useState(initial?.name ?? '')
+  const [phone, setPhone] = useState(initial?.phone ?? '')
+  const [address, setAddress] = useState(initial?.address ?? '')
+  const [hours, setHours] = useState(initial?.hours ?? '')
+  const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [position, setPosition] = useState<PickedLocation | null>(
+    initial?.lat != null && initial?.lon != null
+      ? { name: initial.address || initial.name, lat: initial.lat, lon: initial.lon }
+      : null,
+  )
   const [showLocationPicker, setShowLocationPicker] = useState(false)
 
   function handleSubmit(e: React.FormEvent) {
@@ -32,6 +38,7 @@ export function PoiFormModal({ onSave, onClose }: PoiFormModalProps) {
       name: name.trim(),
       phone: phone.trim(),
       address: address.trim(),
+      hours: hours.trim(),
       notes: notes.trim(),
       lat: position?.lat ?? null,
       lon: position?.lon ?? null,
@@ -41,7 +48,7 @@ export function PoiFormModal({ onSave, onClose }: PoiFormModalProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Aggiungi punto di interesse</h2>
+        <h2>{initial ? 'Modifica punto di interesse' : 'Aggiungi punto di interesse'}</h2>
         <form onSubmit={handleSubmit}>
           <label>
             Tipo
@@ -62,12 +69,16 @@ export function PoiFormModal({ onSave, onClose }: PoiFormModalProps) {
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Es. 0331 123456" />
           </label>
           <label>
+            Orari
+            <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Es. Lun-Ven 8-20, sab-dom chiuso" />
+          </label>
+          <label>
             Indirizzo
             <input value={address} onChange={(e) => setAddress(e.target.value)} />
           </label>
           <label>
             Note
-            <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Altri contatti, riferimenti, indicazioni…" />
           </label>
           <button type="button" onClick={() => setShowLocationPicker(true)}>
             <LocationIcon size={14} /> {position ? 'Cambia posizione' : 'Scegli posizione sulla mappa'}

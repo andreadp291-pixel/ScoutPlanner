@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createPage, deletePage, listPages } from '../api/pages'
-import { createPoi, deletePoi, listPois, type PoiInput, type PoiKind } from '../api/pois'
+import { createPoi, deletePoi, listPois, updatePoi, type Poi, type PoiInput, type PoiKind } from '../api/pois'
 import { getLocation, setLocation } from '../api/projectLocation'
 import { getProjectAccess } from '../api/projects'
 import { LocationPickerModal, type PickedLocation } from '../components/editor/LocationPickerModal'
@@ -11,6 +11,7 @@ import { LocationIcon } from '../components/icons/LocationIcon'
 import { PlusIcon } from '../components/icons/PlusIcon'
 import { TrashIcon } from '../components/icons/TrashIcon'
 import { PoiFormModal } from '../components/PoiFormModal'
+import { PoiMap } from '../components/PoiMap'
 import { PoiSearchModal } from '../components/PoiSearchModal'
 import { Spinner } from '../components/Spinner'
 
@@ -20,6 +21,9 @@ const KIND_LABELS: Record<PoiKind, string> = {
   fire_station: 'Vigili del fuoco',
   other: 'Altro',
 }
+const ALL_KINDS = Object.keys(KIND_LABELS) as PoiKind[]
+
+type PoiFormTarget = 'new' | Poi | null
 
 export function ProjectInfo() {
   const { projectId } = useParams()
@@ -27,8 +31,9 @@ export function ProjectInfo() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showLocationPicker, setShowLocationPicker] = useState(false)
-  const [showPoiForm, setShowPoiForm] = useState(false)
+  const [poiFormTarget, setPoiFormTarget] = useState<PoiFormTarget>(null)
   const [showPoiSearch, setShowPoiSearch] = useState(false)
+  const [visibleKinds, setVisibleKinds] = useState<Set<PoiKind>>(new Set(ALL_KINDS))
 
   const accessQuery = useQuery({ queryKey: ['access', id], queryFn: () => getProjectAccess(id) })
   const locationQuery = useQuery({ queryKey: ['location', id], queryFn: () => getLocation(id) })
@@ -50,6 +55,12 @@ export function ProjectInfo() {
     mutationFn: (input: PoiInput) => createPoi(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pois', id] }),
     onError: (err) => alert(err instanceof Error ? err.message : "Errore durante l'aggiunta"),
+  })
+
+  const updatePoiMutation = useMutation({
+    mutationFn: ({ poiId, input }: { poiId: number; input: PoiInput }) => updatePoi(id, poiId, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pois', id] }),
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante la modifica'),
   })
 
   const importPoisMutation = useMutation({
@@ -89,9 +100,19 @@ export function ProjectInfo() {
     if (title?.trim()) createPageMutation.mutate(title.trim())
   }
 
+  function toggleKind(kind: PoiKind) {
+    setVisibleKinds((prev) => {
+      const next = new Set(prev)
+      if (next.has(kind)) next.delete(kind)
+      else next.add(kind)
+      return next
+    })
+  }
+
   if (accessQuery.isLoading) return <Spinner label="Caricamento..." />
 
   const location = locationQuery.data
+  const pois = poisQuery.data ?? []
 
   return (
     <div>
@@ -121,39 +142,67 @@ export function ProjectInfo() {
 
       <div className="card">
         <h2>Punti di interesse</h2>
-        {poisQuery.data && poisQuery.data.length > 0 ? (
+
+        {(pois.length > 0 || location) && (
+          <>
+            <div className="poi-filter-row">
+              {ALL_KINDS.map((kind) => (
+                <label key={kind} className="group-checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={visibleKinds.has(kind)}
+                    onChange={() => toggleKind(kind)}
+                  />
+                  {KIND_LABELS[kind]}
+                </label>
+              ))}
+            </div>
+            <PoiMap campLocation={location ?? null} pois={pois} visibleKinds={visibleKinds} />
+          </>
+        )}
+
+        {pois.length > 0 ? (
           <ul className="poi-list">
-            {poisQuery.data.map((poi) => (
-              <li key={poi.id} className="poi-card">
-                <div>
-                  <span className="poi-kind-badge">{KIND_LABELS[poi.kind]}</span>
-                  <strong>{poi.name}</strong>
-                  {poi.phone && (
-                    <>
-                      {' · '}
-                      <a href={`tel:${poi.phone.replace(/\s+/g, '')}`}>{poi.phone}</a>
-                    </>
+            {pois
+              .filter((poi) => visibleKinds.has(poi.kind))
+              .map((poi) => (
+                <li key={poi.id} className="poi-card">
+                  <div>
+                    <span className="poi-kind-badge">{KIND_LABELS[poi.kind]}</span>
+                    <strong>{poi.name}</strong>
+                    {poi.phone && (
+                      <>
+                        {' · '}
+                        <a href={`tel:${poi.phone.replace(/\s+/g, '')}`}>{poi.phone}</a>
+                      </>
+                    )}
+                    {poi.address && <div className="muted">{poi.address}</div>}
+                    {poi.hours && <div className="muted">Orari: {poi.hours}</div>}
+                    {poi.notes && <div className="muted">{poi.notes}</div>}
+                  </div>
+                  {canEdit && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button type="button" onClick={() => setPoiFormTarget(poi)}>
+                        Modifica
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Elimina"
+                        onClick={() => deletePoiMutation.mutate(poi.id)}
+                      >
+                        <TrashIcon size={14} />
+                      </button>
+                    </div>
                   )}
-                  {poi.address && <div className="muted">{poi.address}</div>}
-                </div>
-                {canEdit && (
-                  <button
-                    type="button"
-                    aria-label="Elimina"
-                    onClick={() => deletePoiMutation.mutate(poi.id)}
-                  >
-                    <TrashIcon size={14} />
-                  </button>
-                )}
-              </li>
-            ))}
+                </li>
+              ))}
           </ul>
         ) : (
           <p className="muted">Nessun punto di interesse ancora.</p>
         )}
         {canEdit && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <button type="button" onClick={() => setShowPoiForm(true)}>
+            <button type="button" onClick={() => setPoiFormTarget('new')}>
               <PlusIcon size={14} /> Aggiungi manualmente
             </button>
             <button type="button" onClick={() => setShowPoiSearch(true)} disabled={!location}>
@@ -200,13 +249,15 @@ export function ProjectInfo() {
           onClose={() => setShowLocationPicker(false)}
         />
       )}
-      {showPoiForm && (
+      {poiFormTarget && (
         <PoiFormModal
+          initial={poiFormTarget === 'new' ? undefined : poiFormTarget}
           onSave={(input) => {
-            createPoiMutation.mutate(input)
-            setShowPoiForm(false)
+            if (poiFormTarget === 'new') createPoiMutation.mutate(input)
+            else updatePoiMutation.mutate({ poiId: poiFormTarget.id, input })
+            setPoiFormTarget(null)
           }}
-          onClose={() => setShowPoiForm(false)}
+          onClose={() => setPoiFormTarget(null)}
         />
       )}
       {showPoiSearch && location && (

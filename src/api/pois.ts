@@ -12,6 +12,7 @@ export interface Poi {
   lat: number | null
   lon: number | null
   notes: string
+  hours: string
   created_at: string
 }
 
@@ -23,6 +24,7 @@ export interface PoiInput {
   lat?: number | null
   lon?: number | null
   notes?: string
+  hours?: string
 }
 
 export function listPois(projectId: number) {

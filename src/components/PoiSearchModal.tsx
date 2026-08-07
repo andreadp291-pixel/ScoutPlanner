@@ -29,6 +29,7 @@ interface Candidate {
   name: string
   phone: string
   address: string
+  hours: string
   lat: number
   lon: number
   distanceM: number
@@ -72,6 +73,7 @@ async function searchOverpass(lat: number, lon: number): Promise<Candidate[]> {
       name,
       phone: tags.phone || tags['contact:phone'] || '',
       address: buildAddress(tags),
+      hours: tags.opening_hours || '',
       lat: el.lat,
       lon: el.lon,
       distanceM: haversineMeters({ lat, lon }, { lat: el.lat, lon: el.lon }),
@@ -125,6 +127,7 @@ export function PoiSearchModal({ campLocation, onImport, onClose }: PoiSearchMod
         name: c.name,
         phone: c.phone,
         address: c.address,
+        hours: c.hours,
         lat: c.lat,
         lon: c.lon,
       })),
@@ -174,6 +177,7 @@ export function PoiSearchModal({ campLocation, onImport, onClose }: PoiSearchMod
                   <span>
                     <strong>{c.name}</strong> · {KIND_LABELS[c.kind]} · {(c.distanceM / 1000).toFixed(1)} km
                     {c.address && <> · {c.address}</>}
+                    {c.hours && <> · {c.hours}</>}
                   </span>
                 </label>
               ))}

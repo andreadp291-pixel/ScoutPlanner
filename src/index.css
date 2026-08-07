@@ -1252,3 +1252,37 @@ code {
 .poi-search-results {
   max-height: 260px;
 }
+
+.poi-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.poi-map-wrap {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+/* --- blocco tempo di viaggio --- */
+.block-travel-edit,
+.block-travel-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.block-travel-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.block-travel-route {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-weight: 500;
+  margin: 0;
+}

@@ -13,6 +13,7 @@ import { emptyBlock } from './blocks'
 import { GpxBlockBody } from './GpxBlockBody'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
 import { TablePresetModal, type TablePresetGroup } from './TablePresetModal'
+import { TravelBlockBody } from './TravelBlockBody'
 
 interface BlockEditorProps {
   projectId: number
@@ -256,6 +257,9 @@ function BlockBody({ block, editable, projectId, presetDays, presetGroups, onUpd
 
     case 'gpx':
       return <GpxBlockBody block={block} editable={editable} projectId={projectId} onUpdate={onUpdate} />
+
+    case 'travel':
+      return <TravelBlockBody block={block} editable={editable} onUpdate={onUpdate} />
 
     case 'divider':
       return <hr className="block-divider" />

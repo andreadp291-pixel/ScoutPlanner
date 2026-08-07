@@ -8,6 +8,20 @@ export type Block =
   | { id: string; type: 'location'; name: string; lat: number; lon: number }
   | { id: string; type: 'table'; rows: string[][] }
   | { id: string; type: 'gpx'; url: string; filename: string }
+  | {
+      id: string
+      type: 'travel'
+      originName: string
+      originLat: number | null
+      originLon: number | null
+      destName: string
+      destLat: number | null
+      destLon: number | null
+      durationMin: number | null
+      distanceKm: number | null
+      trafficDelayMin: number | null
+      computedAt: string | null
+    }
   | { id: string; type: 'divider' }
 
 export type BlockType = Block['type']
@@ -48,6 +62,21 @@ export function emptyBlock(type: BlockType): Block {
       }
     case 'gpx':
       return { id, type, url: '', filename: '' }
+    case 'travel':
+      return {
+        id,
+        type,
+        originName: '',
+        originLat: null,
+        originLon: null,
+        destName: '',
+        destLat: null,
+        destLon: null,
+        durationMin: null,
+        distanceKm: null,
+        trafficDelayMin: null,
+        computedAt: null,
+      }
     case 'divider':
       return { id, type }
   }

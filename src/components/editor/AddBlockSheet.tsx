@@ -7,6 +7,7 @@ import { LinkIcon } from '../icons/LinkIcon'
 import { ListIcon } from '../icons/ListIcon'
 import { LocationIcon } from '../icons/LocationIcon'
 import { PhoneIcon } from '../icons/PhoneIcon'
+import { RouteIcon } from '../icons/RouteIcon'
 import { TableIcon } from '../icons/TableIcon'
 import { TitleIcon } from '../icons/TitleIcon'
 
@@ -25,6 +26,7 @@ const OPTIONS: { type: BlockType; label: string; icon: React.ReactNode }[] = [
   { type: 'location', label: 'Posizione', icon: <LocationIcon size={22} /> },
   { type: 'table', label: 'Tabella', icon: <TableIcon size={22} /> },
   { type: 'gpx', label: 'Traccia GPX', icon: <CompassIcon size={22} /> },
+  { type: 'travel', label: 'Tempo di viaggio', icon: <RouteIcon size={22} /> },
   { type: 'divider', label: 'Divisore', icon: <DividerIcon size={22} /> },
 ]
 
