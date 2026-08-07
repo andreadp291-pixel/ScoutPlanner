@@ -4,6 +4,13 @@ export interface GpxPoint {
   ele: number | null
 }
 
+export interface GpxTrackPoint {
+  km: number
+  lat: number
+  lon: number
+  ele: number | null
+}
+
 export interface GpxStats {
   distanceKm: number
   elevationGainM: number
@@ -11,6 +18,9 @@ export interface GpxStats {
   maxAltitudeM: number | null
   minAltitudeM: number | null
   profile: { km: number; ele: number }[]
+  // Ogni punto del tracciato con la distanza cumulata: usato per posizionare
+  // il marcatore sulla mappa in corrispondenza dello slider del grafico quota.
+  track: GpxTrackPoint[]
   points: GpxPoint[]
   segments: GpxPoint[][]
 }
@@ -55,6 +65,7 @@ export function parseGpx(xmlText: string): GpxStats {
   let elevationGainM = 0
   let elevationLossM = 0
   const profile: { km: number; ele: number }[] = []
+  const track: GpxTrackPoint[] = []
   const points: GpxPoint[] = []
 
   for (const segment of segments) {
@@ -71,6 +82,7 @@ export function parseGpx(xmlText: string): GpxStats {
           else elevationLossM += -delta
         }
       }
+      track.push({ km: cumKm, lat: point.lat, lon: point.lon, ele: point.ele })
       if (point.ele !== null) profile.push({ km: cumKm, ele: point.ele })
     }
   }
@@ -90,6 +102,7 @@ export function parseGpx(xmlText: string): GpxStats {
     maxAltitudeM,
     minAltitudeM,
     profile,
+    track,
     points,
     segments,
   }

@@ -14,21 +14,28 @@ const MARGIN = { top: 10, right: 10, bottom: 20, left: 38 }
 const INNER_W = CHART_W - MARGIN.left - MARGIN.right
 const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom
 
-// Punto del profilo più vicino a un dato km (il profilo è già ordinato per km crescente).
-function nearestProfilePoint(profile: GpxStats['profile'], km: number) {
+// Punto più vicino a un dato km in un array ordinato per km crescente
+// (usato sia per il profilo quota che per il tracciato lat/lon).
+function nearestByKm<T extends { km: number }>(arr: T[], km: number): T {
   let lo = 0
-  let hi = profile.length - 1
+  let hi = arr.length - 1
   while (lo < hi) {
     const mid = (lo + hi) >> 1
-    if (profile[mid].km < km) lo = mid + 1
+    if (arr[mid].km < km) lo = mid + 1
     else hi = mid
   }
-  return profile[lo]
+  return arr[lo]
 }
 
-function ElevationChart({ profile }: { profile: GpxStats['profile'] }) {
-  const [scrubKm, setScrubKm] = useState(0)
-
+function ElevationChart({
+  profile,
+  scrubKm,
+  onScrubKmChange,
+}: {
+  profile: GpxStats['profile']
+  scrubKm: number
+  onScrubKmChange: (km: number) => void
+}) {
   const maxKm = profile.length ? profile[profile.length - 1].km || 1 : 1
   const eles = profile.map((p) => p.ele)
   const minEle = profile.length ? Math.min(...eles) : 0
@@ -55,7 +62,7 @@ function ElevationChart({ profile }: { profile: GpxStats['profile'] }) {
 
   const gridLines = [0, 0.5, 1].map((f) => minEle + eleRange * f)
 
-  const current = nearestProfilePoint(profile, scrubKm)
+  const current = nearestByKm(profile, scrubKm)
   const currentIdx = profile.indexOf(current)
   const dotX = toX(current.km)
   const dotY = toY(current.ele)
@@ -101,7 +108,7 @@ function ElevationChart({ profile }: { profile: GpxStats['profile'] }) {
         max={maxKm}
         step={maxKm / 500 || 0.01}
         value={scrubKm}
-        onChange={(e) => setScrubKm(Number(e.target.value))}
+        onChange={(e) => onScrubKmChange(Number(e.target.value))}
         aria-label="Scorri la traccia"
       />
       <div className="gpx-scrub-stats">
@@ -190,8 +197,9 @@ function GpxStatsStrip({ stats }: { stats: GpxStats }) {
 // `.leaflet-container { z-index: 0 }` isola già i pannelli interni di Leaflet
 // (che di norma hanno z-index 400-1000) nel proprio stacking context, quindi
 // non finiscono mai sopra ai modal/menu della pagina.
-function GpxMap({ segments }: { segments: LatLon[][] }) {
+function GpxMap({ segments, cursor }: { segments: LatLon[][]; cursor: LatLon | null }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const cursorMarkerRef = useRef<L.CircleMarker | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -219,11 +227,27 @@ function GpxMap({ segments }: { segments: LatLon[][] }) {
       map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] })
     }
 
+    // Marcatore "sei qui", sincronizzato con lo slider del grafico quota:
+    // creato una volta sola e poi solo spostato (setLatLng), mai ricreato,
+    // altrimenti la mappa "salterebbe" ad ogni tick dello slider.
+    cursorMarkerRef.current = L.circleMarker(cursor ?? allLatLngs[0] ?? [0, 0], {
+      radius: 7,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#2563eb',
+      fillOpacity: 1,
+    }).addTo(map)
+
     return () => {
       map.remove()
+      cursorMarkerRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (cursor) cursorMarkerRef.current?.setLatLng(cursor)
+  }, [cursor])
 
   return (
     <div className="gpx-map-wrap">
@@ -234,11 +258,19 @@ function GpxMap({ segments }: { segments: LatLon[][] }) {
 
 function GpxTrackView({ url, filename }: { url: string; filename: string }) {
   const { stats, error } = useGpxStats(url)
+  const [scrubKm, setScrubKm] = useState(0)
 
   const segments: LatLon[][] =
     stats?.segments.map((seg) => seg.map((p): LatLon => [p.lat, p.lon])) ?? []
   const allPoints = segments.flat()
   const bounds = allPoints.length > 0 ? computeBounds(allPoints) : null
+
+  const cursor: LatLon | null = stats?.track.length
+    ? (() => {
+        const p = nearestByKm(stats.track, scrubKm)
+        return [p.lat, p.lon]
+      })()
+    : null
 
   return (
     <div className="gpx-card">
@@ -251,9 +283,9 @@ function GpxTrackView({ url, filename }: { url: string; filename: string }) {
       {!error && !stats && <p className="muted">Caricamento traccia…</p>}
       {stats && bounds && (
         <>
-          <GpxMap segments={segments} />
+          <GpxMap segments={segments} cursor={cursor} />
           <GpxStatsStrip stats={stats} />
-          <ElevationChart profile={stats.profile} />
+          <ElevationChart profile={stats.profile} scrubKm={scrubKm} onScrubKmChange={setScrubKm} />
         </>
       )}
     </div>
