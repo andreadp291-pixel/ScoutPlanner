@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tester GPX — verifica indipendente</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f2efe9;
+    color: #1e1928;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  header {
+    padding: 14px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e2ddd0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 17px;
+    margin: 0;
+  }
+  header p {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: #6b6478;
+  }
+  #dropzone {
+    border: 2px dashed #b9b2c4;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #6b6478;
+    cursor: pointer;
+    background: #faf8f4;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #dropzone.dragover {
+    border-color: #3b82f6;
+    background: #eef4ff;
+    color: #1e1928;
+  }
+  #fileInput {
+    display: none;
+  }
+  #main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  #map {
+    flex: 1;
+    min-width: 0;
+  }
+  #sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: #fff;
+    border-left: 1px solid #e2ddd0;
+    padding: 16px;
+    overflow-y: auto;
+    font-size: 13px;
+  }
+  #sidebar h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b6478;
+    margin: 0 0 10px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0ede6;
+  }
+  .stat-row span:first-child {
+    color: #6b6478;
+  }
+  .stat-row span:last-child {
+    font-weight: 600;
+  }
+  #segList {
+    margin-top: 16px;
+  }
+  #segList div {
+    padding: 4px 0;
+    color: #6b6478;
+  }
+  #placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #9a93a6;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+  }
+  #error {
+    color: #c0392b;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  label.toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    cursor: pointer;
+    color: #4a4458;
+  }
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #17141d; color: #eae6f0; }
+    header, #sidebar { background: #1f1b28; border-color: #322c3d; }
+    header p, .stat-row span:first-child, #sidebar h2 { color: #a49bb5; }
+    .stat-row { border-color: #2a2534; }
+    #dropzone { background: #211d2b; border-color: #423a54; color: #a49bb5; }
+    #dropzone.dragover { background: #22304a; border-color: #5b8def; color: #eae6f0; }
+    #placeholder { color: #6d6580; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <h1>Tester GPX</h1>
+      <p>Strumento indipendente per verificare come una traccia GPX si sovrappone alle strade reali (OpenStreetMap).</p>
+    </div>
+    <div>
+      <div id="dropzone">Trascina qui un file .gpx, o clicca per sceglierlo</div>
+      <input type="file" id="fileInput" accept=".gpx" />
+      <div id="error"></div>
+    </div>
+  </header>
+  <div id="main">
+    <div id="map"><div id="placeholder">Carica un file GPX per vedere la traccia</div></div>
+    <div id="sidebar" style="display:none">
+      <h2>Statistiche</h2>
+      <div class="stat-row"><span>Punti totali</span><span id="statPoints">–</span></div>
+      <div class="stat-row"><span>Segmenti (trkseg)</span><span id="statSegments">–</span></div>
+      <div class="stat-row"><span>Distanza</span><span id="statDistance">–</span></div>
+      <div class="stat-row"><span>Dislivello +</span><span id="statGain">–</span></div>
+      <div class="stat-row"><span>Dislivello -</span><span id="statLoss">–</span></div>
+      <div class="stat-row"><span>Salto max tra due punti</span><span id="statMaxJump">–</span></div>
+      <label class="toggle">
+        <input type="checkbox" id="showPoints" />
+        Mostra ogni punto registrato
+      </label>
+      <div id="segList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const errorBox = document.getElementById('error');
+  const sidebar = document.getElementById('sidebar');
+  const showPointsCheckbox = document.getElementById('showPoints');
+
+  let map = null;
+  let currentLayers = [];
+  let lastSegments = null;
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+  showPointsCheckbox.addEventListener('change', () => {
+    if (lastSegments) render(lastSegments);
+  });
+
+  function handleFile(file) {
+    errorBox.style.display = 'none';
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const segments = parseGpx(reader.result);
+        if (segments.flat().length === 0) throw new Error('Nessun punto <trkpt> trovato nel file.');
+        lastSegments = segments;
+        render(segments);
+      } catch (err) {
+        errorBox.textContent = 'Errore: ' + err.message;
+        errorBox.style.display = 'block';
+      }
+    };
+    reader.onerror = () => {
+      errorBox.textContent = 'Impossibile leggere il file.';
+      errorBox.style.display = 'block';
+    };
+    reader.readAsText(file);
+  }
+
+  function parseGpx(text) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) throw new Error('XML non valido.');
+    const trksegs = Array.from(doc.getElementsByTagName('trkseg'));
+    let segments;
+    if (trksegs.length > 0) {
+      segments = trksegs.map((seg) => Array.from(seg.getElementsByTagName('trkpt')).map(parsePoint));
+    } else {
+      const trkpts = Array.from(doc.getElementsByTagName('trkpt'));
+      const source = trkpts.length > 0 ? trkpts : Array.from(doc.getElementsByTagName('rtept'));
+      segments = source.length > 0 ? [source.map(parsePoint)] : [];
+    }
+    return segments.filter((s) => s.length > 0);
+  }
+
+  function parsePoint(el) {
+    const lat = parseFloat(el.getAttribute('lat'));
+    const lon = parseFloat(el.getAttribute('lon'));
+    const eleEl = el.getElementsByTagName('ele')[0];
+    const ele = eleEl ? parseFloat(eleEl.textContent) : null;
+    return { lat, lon, ele: Number.isFinite(ele) ? ele : null };
+  }
+
+  function haversine(a, b) {
+    const R = 6371000;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLon = toRad(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  function render(segments) {
+    document.getElementById('placeholder')?.remove();
+    sidebar.style.display = 'block';
+
+    if (!map) {
+      map = L.map('map');
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+    }
+
+    currentLayers.forEach((l) => map.removeLayer(l));
+    currentLayers = [];
+
+    let totalPoints = 0;
+    let totalDist = 0;
+    let gain = 0;
+    let loss = 0;
+    let maxJump = 0;
+    const allLatLngs = [];
+
+    segments.forEach((seg) => {
+      totalPoints += seg.length;
+      const latlngs = seg.map((p) => [p.lat, p.lon]);
+      allLatLngs.push(...latlngs);
+      const line = L.polyline(latlngs, { color: '#c0392b', weight: 3 }).addTo(map);
+      currentLayers.push(line);
+
+      for (let i = 1; i < seg.length; i++) {
+        const d = haversine(seg[i - 1], seg[i]);
+        totalDist += d;
+        if (d > maxJump) maxJump = d;
+        if (seg[i - 1].ele !== null && seg[i].ele !== null) {
+          const delta = seg[i].ele - seg[i - 1].ele;
+          if (delta > 0) gain += delta; else loss += -delta;
+        }
+      }
+
+      if (showPointsCheckbox.checked) {
+        seg.forEach((p, i) => {
+          const marker = L.circleMarker([p.lat, p.lon], {
+            radius: 3,
+            color: '#fff',
+            weight: 1,
+            fillColor: i === 0 ? '#2e8b57' : (i === seg.length - 1 ? '#c0392b' : '#3b82f6'),
+            fillOpacity: 1,
+          }).bindTooltip(`punto ${i}${p.ele !== null ? ' · ' + p.ele.toFixed(0) + 'm' : ''}`);
+          marker.addTo(map);
+          currentLayers.push(marker);
+        });
+      } else if (seg.length > 0) {
+        const start = L.circleMarker([seg[0].lat, seg[0].lon], { radius: 5, color: '#fff', weight: 2, fillColor: '#2e8b57', fillOpacity: 1 }).addTo(map);
+        const end = L.circleMarker([seg[seg.length - 1].lat, seg[seg.length - 1].lon], { radius: 5, color: '#fff', weight: 2, fillColor: '#c0392b', fillOpacity: 1 }).addTo(map);
+        currentLayers.push(start, end);
+      }
+    });
+
+    if (allLatLngs.length > 0) {
+      map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+    }
+
+    document.getElementById('statPoints').textContent = totalPoints;
+    document.getElementById('statSegments').textContent = segments.length;
+    document.getElementById('statDistance').textContent = (totalDist / 1000).toFixed(2) + ' km';
+    document.getElementById('statGain').textContent = '+' + Math.round(gain) + ' m';
+    document.getElementById('statLoss').textContent = '-' + Math.round(loss) + ' m';
+    document.getElementById('statMaxJump').textContent = Math.round(maxJump) + ' m';
+
+    const segList = document.getElementById('segList');
+    if (segments.length > 1) {
+      segList.innerHTML = '<h2 style="margin-top:16px">Segmenti</h2>' +
+        segments.map((s, i) => `<div>Segmento ${i + 1}: ${s.length} punti</div>`).join('');
+    } else {
+      segList.innerHTML = '';
+    }
+  }
+</script>
+</body>
+</html>

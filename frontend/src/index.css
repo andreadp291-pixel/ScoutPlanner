@@ -869,6 +869,7 @@ code {
   margin-bottom: 10px;
 }
 .gpx-map-wrap {
+  position: relative;
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--border);
