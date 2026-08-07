@@ -12,12 +12,16 @@ import type { ActivityDoc, Block, BlockType } from './blocks'
 import { emptyBlock } from './blocks'
 import { GpxBlockBody } from './GpxBlockBody'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
+import { TablePresetModal, type TablePresetGroup } from './TablePresetModal'
 
 interface BlockEditorProps {
   projectId: number
   content: ActivityDoc | null
   editable: boolean
   onChange?: (doc: ActivityDoc) => void
+  // Dati del progetto disponibili per riempire le tabelle senza doverli riscrivere a mano.
+  presetDays?: string[]
+  presetGroups?: TablePresetGroup[]
 }
 
 function isSafeUrl(url: string): boolean {
@@ -45,7 +49,14 @@ function renderInline(text: string): ReactNode {
   })
 }
 
-export function BlockEditor({ projectId, content, editable, onChange }: BlockEditorProps) {
+export function BlockEditor({
+  projectId,
+  content,
+  editable,
+  onChange,
+  presetDays = [],
+  presetGroups = [],
+}: BlockEditorProps) {
   const [blocks, setBlocks] = useState<Block[]>(content?.blocks ?? [])
   const [showAdd, setShowAdd] = useState(false)
   const [locationEditingId, setLocationEditingId] = useState<string | null>(null)
@@ -123,6 +134,8 @@ export function BlockEditor({ projectId, content, editable, onChange }: BlockEdi
             block={block}
             editable={editable}
             projectId={projectId}
+            presetDays={presetDays}
+            presetGroups={presetGroups}
             onUpdate={(updater) => updateBlock(block.id, updater)}
             onPickLocation={() => setLocationEditingId(block.id)}
           />
@@ -158,11 +171,13 @@ interface BlockBodyProps {
   block: Block
   editable: boolean
   projectId: number
+  presetDays: string[]
+  presetGroups: TablePresetGroup[]
   onUpdate: (updater: (b: Block) => Block) => void
   onPickLocation: () => void
 }
 
-function BlockBody({ block, editable, projectId, onUpdate, onPickLocation }: BlockBodyProps) {
+function BlockBody({ block, editable, projectId, presetDays, presetGroups, onUpdate, onPickLocation }: BlockBodyProps) {
   switch (block.type) {
     case 'title':
       return editable ? (
@@ -229,7 +244,15 @@ function BlockBody({ block, editable, projectId, onUpdate, onPickLocation }: Blo
       )
 
     case 'table':
-      return <TableBlockBody block={block} editable={editable} onUpdate={onUpdate} />
+      return (
+        <TableBlockBody
+          block={block}
+          editable={editable}
+          onUpdate={onUpdate}
+          presetDays={presetDays}
+          presetGroups={presetGroups}
+        />
+      )
 
     case 'gpx':
       return <GpxBlockBody block={block} editable={editable} projectId={projectId} onUpdate={onUpdate} />
@@ -442,11 +465,17 @@ function TableBlockBody({
   block,
   editable,
   onUpdate,
+  presetDays,
+  presetGroups,
 }: {
   block: Extract<Block, { type: 'table' }>
   editable: boolean
   onUpdate: (updater: (b: Block) => Block) => void
+  presetDays: string[]
+  presetGroups: TablePresetGroup[]
 }) {
+  const [showPreset, setShowPreset] = useState(false)
+
   function setRows(rows: string[][]) {
     onUpdate((b) => (b.type === 'table' ? { ...b, rows } : b))
   }
@@ -466,6 +495,20 @@ function TableBlockBody({
   function removeCol(i: number) {
     if (cols <= 1) return
     setRows(block.rows.map((row) => row.filter((_, j) => j !== i)))
+  }
+
+  function insertPreset(labels: string[], axis: 'row' | 'col') {
+    if (axis === 'row') {
+      const newRows = labels.map((label) => [label, ...Array.from({ length: Math.max(cols - 1, 0) }, () => '')])
+      setRows([...block.rows, ...newRows])
+    } else {
+      const rows = block.rows.map((row) => [...row])
+      for (const label of labels) {
+        rows.forEach((row, rowIdx) => row.push(rowIdx === 0 ? label : ''))
+      }
+      setRows(rows)
+    }
+    setShowPreset(false)
   }
 
   if (!editable) {
@@ -525,7 +568,20 @@ function TableBlockBody({
         <button type="button" onClick={() => removeCol(cols - 1)} disabled={cols <= 1}>
           <TrashIcon size={13} /> Colonna
         </button>
+        {(presetDays.length > 0 || presetGroups.length > 0) && (
+          <button type="button" onClick={() => setShowPreset(true)}>
+            Inserisci preimpostati
+          </button>
+        )}
       </div>
+      {showPreset && (
+        <TablePresetModal
+          days={presetDays}
+          groups={presetGroups}
+          onInsert={insertPreset}
+          onClose={() => setShowPreset(false)}
+        />
+      )}
     </div>
   )
 }

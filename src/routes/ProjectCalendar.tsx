@@ -18,6 +18,7 @@ import { DayColumn } from '../components/calendar/DayColumn'
 import { TimeAxis } from '../components/calendar/TimeAxis'
 import { dateRange, formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
 import { DownloadIcon } from '../components/icons/DownloadIcon'
+import { InfoIcon } from '../components/icons/InfoIcon'
 import { ShareIcon } from '../components/icons/ShareIcon'
 import { UploadIcon } from '../components/icons/UploadIcon'
 import { UsersIcon } from '../components/icons/UsersIcon'
@@ -216,6 +217,12 @@ export function ProjectCalendar() {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Link to={`/projects/${id}/info`}>
+            <button type="button">
+              <InfoIcon />
+              Info generali
+            </button>
+          </Link>
           <button type="button" onClick={handleExport}>
             <DownloadIcon />
             Esporta

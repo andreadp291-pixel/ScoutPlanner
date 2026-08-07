@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getActivity, updateActivity } from '../api/activities'
-import { getProjectAccess } from '../api/projects'
+import { listGroups } from '../api/groups'
+import { getProject, getProjectAccess } from '../api/projects'
+import { dateRange, formatShortDate } from '../components/calendar/time'
 import { BlockEditor } from '../components/editor/BlockEditor'
 import type { ActivityDoc } from '../components/editor/blocks'
 import { parseActivityDoc } from '../components/editor/blocks'
@@ -24,6 +26,8 @@ export function ActivityDescription() {
     queryKey: ['activity', id, actId],
     queryFn: () => getActivity(id, actId),
   })
+  const projectQuery = useQuery({ queryKey: ['project', id], queryFn: () => getProject(id) })
+  const groupsQuery = useQuery({ queryKey: ['groups', id], queryFn: () => listGroups(id) })
 
   const saveMutation = useMutation({
     mutationFn: (content: ActivityDoc) =>
@@ -57,6 +61,9 @@ export function ActivityDescription() {
   const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
   const currentContent = pendingContent ?? parseActivityDoc(activity.description)
   const currentMaterials = materials ?? activity.materials
+  const presetDays = projectQuery.data
+    ? dateRange(projectQuery.data.start_date, projectQuery.data.end_date).map(formatShortDate)
+    : []
 
   return (
     <div>
@@ -96,6 +103,8 @@ export function ActivityDescription() {
         content={currentContent}
         editable={canEdit && mode === 'edit'}
         onChange={setPendingContent}
+        presetDays={presetDays}
+        presetGroups={groupsQuery.data ?? []}
       />
 
       <form onSubmit={(e) => e.preventDefault()} style={{ marginTop: 20 }}>

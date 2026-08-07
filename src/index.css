@@ -1200,7 +1200,55 @@ code {
   margin-bottom: 0 !important;
   cursor: pointer;
 }
-.group-checkbox-item input[type='checkbox'] {
+.group-checkbox-item input[type='checkbox'],
+.group-checkbox-item input[type='radio'] {
   width: auto;
   margin: 0;
+}
+
+/* --- preset tabella (giorni/gruppi) --- */
+.preset-radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 6px 0 14px;
+}
+
+/* --- info generali di progetto: posizione, punti di interesse, pagine --- */
+.poi-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.poi-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+}
+.poi-kind-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-right: 8px;
+  border-radius: 9px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.poi-search-modal {
+  width: 520px;
+}
+.poi-search-results {
+  max-height: 260px;
 }

@@ -13,7 +13,9 @@ import { OwnerLogin } from './routes/OwnerLogin'
 import { OwnerSetPassword } from './routes/OwnerSetPassword'
 import { ProjectCalendar } from './routes/ProjectCalendar'
 import { ProjectCreate } from './routes/ProjectCreate'
+import { ProjectInfo } from './routes/ProjectInfo'
 import { ProjectList } from './routes/ProjectList'
+import { ProjectPageEditor } from './routes/ProjectPageEditor'
 import { ProjectTokens } from './routes/ProjectTokens'
 
 const queryClient = new QueryClient()
@@ -109,6 +111,8 @@ function App() {
                 path="/projects/:projectId/activities/:activityId/description"
                 element={<ActivityDescription />}
               />
+              <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
+              <Route path="/projects/:projectId/pages/:pageId" element={<ProjectPageEditor />} />
               <Route
                 path="/projects/:projectId/tokens"
                 element={
