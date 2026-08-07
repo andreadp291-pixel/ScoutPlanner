@@ -26,14 +26,6 @@ function haversineMeters(a: GpxPoint, b: GpxPoint): number {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-export function downsample<T>(arr: T[], maxPoints: number): T[] {
-  if (arr.length <= maxPoints) return arr
-  const step = arr.length / maxPoints
-  const out: T[] = []
-  for (let i = 0; i < maxPoints; i++) out.push(arr[Math.floor(i * step)])
-  return out
-}
-
 function parsePoint(el: Element): GpxPoint {
   const lat = parseFloat(el.getAttribute('lat') ?? '0')
   const lon = parseFloat(el.getAttribute('lon') ?? '0')
@@ -97,7 +89,7 @@ export function parseGpx(xmlText: string): GpxStats {
     elevationLossM,
     maxAltitudeM,
     minAltitudeM,
-    profile: downsample(profile, 200),
+    profile,
     points,
     segments,
   }

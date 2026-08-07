@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import { useEffect, useRef, useState } from 'react'
 import { uploadFile } from '../../api/uploads'
-import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
+import { parseGpx, type GpxStats } from '../../lib/gpx'
 import { CompassIcon } from '../icons/CompassIcon'
 import type { Block } from './blocks'
 
@@ -153,7 +153,7 @@ function GpxTrackView({ url, filename }: { url: string; filename: string }) {
   const { stats, error } = useGpxStats(url)
 
   const segments: LatLon[][] =
-    stats?.segments.map((seg) => downsample(seg, 1500).map((p): LatLon => [p.lat, p.lon])) ?? []
+    stats?.segments.map((seg) => seg.map((p): LatLon => [p.lat, p.lon])) ?? []
   const allPoints = segments.flat()
   const bounds = allPoints.length > 0 ? computeBounds(allPoints) : null
 
