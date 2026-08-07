@@ -1,28 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { JSONContent } from '@tiptap/react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getActivity, updateActivity } from '../api/activities'
 import { getProjectAccess } from '../api/projects'
-import { RichTextEditor } from '../components/editor/RichTextEditor'
+import { BlockEditor } from '../components/editor/BlockEditor'
+import type { ActivityDoc } from '../components/editor/blocks'
+import { parseActivityDoc } from '../components/editor/blocks'
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { Spinner } from '../components/Spinner'
-
-function parseDescription(raw: string | undefined): JSONContent | null {
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as JSONContent
-  } catch {
-    return null
-  }
-}
 
 export function ActivityDescription() {
   const { projectId, activityId } = useParams()
   const id = Number(projectId)
   const actId = Number(activityId)
   const queryClient = useQueryClient()
-  const [pendingContent, setPendingContent] = useState<JSONContent | null>(null)
+  const [pendingContent, setPendingContent] = useState<ActivityDoc | null>(null)
   const [materials, setMaterials] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
@@ -34,7 +26,7 @@ export function ActivityDescription() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: (content: JSONContent) =>
+    mutationFn: (content: ActivityDoc) =>
       updateActivity(id, actId, { description: JSON.stringify(content) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activity', id, actId] })
@@ -63,7 +55,7 @@ export function ActivityDescription() {
 
   const activity = activityQuery.data
   const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
-  const currentContent = pendingContent ?? parseDescription(activity.description)
+  const currentContent = pendingContent ?? parseActivityDoc(activity.description)
   const currentMaterials = materials ?? activity.materials
 
   return (
@@ -98,7 +90,7 @@ export function ActivityDescription() {
         </div>
       )}
 
-      <RichTextEditor
+      <BlockEditor
         key={mode}
         projectId={id}
         content={currentContent}
