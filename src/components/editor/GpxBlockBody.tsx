@@ -1,5 +1,5 @@
 import L from 'leaflet'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { uploadFile } from '../../api/uploads'
 import { parseGpx, type GpxStats } from '../../lib/gpx'
 import { CompassIcon } from '../icons/CompassIcon'
@@ -8,31 +8,114 @@ import type { Block } from './blocks'
 type LatLon = [number, number]
 type Bounds = [LatLon, LatLon]
 
-function ElevationProfile({ profile }: { profile: GpxStats['profile'] }) {
-  if (profile.length < 2) return null
-  const width = 600
-  const height = 90
-  const maxKm = profile[profile.length - 1].km || 1
+const CHART_W = 600
+const CHART_H = 170
+const MARGIN = { top: 10, right: 10, bottom: 20, left: 38 }
+const INNER_W = CHART_W - MARGIN.left - MARGIN.right
+const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom
+
+// Punto del profilo più vicino a un dato km (il profilo è già ordinato per km crescente).
+function nearestProfilePoint(profile: GpxStats['profile'], km: number) {
+  let lo = 0
+  let hi = profile.length - 1
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (profile[mid].km < km) lo = mid + 1
+    else hi = mid
+  }
+  return profile[lo]
+}
+
+function ElevationChart({ profile }: { profile: GpxStats['profile'] }) {
+  const [scrubKm, setScrubKm] = useState(0)
+
+  const maxKm = profile.length ? profile[profile.length - 1].km || 1 : 1
   const eles = profile.map((p) => p.ele)
-  const minEle = Math.min(...eles)
-  const maxEle = Math.max(...eles)
+  const minEle = profile.length ? Math.min(...eles) : 0
+  const maxEle = profile.length ? Math.max(...eles) : 0
   const eleRange = Math.max(maxEle - minEle, 1)
 
-  const linePoints = profile
-    .map((p) => {
-      const x = (p.km / maxKm) * width
-      const y = height - ((p.ele - minEle) / eleRange) * (height - 10) - 5
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
+  // Dislivello positivo cumulato punto per punto: lookup istantaneo mentre si scorre.
+  const cumGain = useMemo(() => {
+    const out: number[] = new Array(profile.length).fill(0)
+    for (let i = 1; i < profile.length; i++) {
+      const delta = profile[i].ele - profile[i - 1].ele
+      out[i] = out[i - 1] + (delta > 0 ? delta : 0)
+    }
+    return out
+  }, [profile])
 
-  const areaPoints = `0,${height} ${linePoints} ${width},${height}`
+  if (profile.length < 2) return null
+
+  const toX = (km: number) => MARGIN.left + (km / maxKm) * INNER_W
+  const toY = (ele: number) => MARGIN.top + INNER_H - ((ele - minEle) / eleRange) * INNER_H
+
+  const linePoints = profile.map((p) => `${toX(p.km).toFixed(1)},${toY(p.ele).toFixed(1)}`).join(' ')
+  const areaPoints = `${toX(0)},${MARGIN.top + INNER_H} ${linePoints} ${toX(maxKm)},${MARGIN.top + INNER_H}`
+
+  const gridLines = [0, 0.5, 1].map((f) => minEle + eleRange * f)
+
+  const current = nearestProfilePoint(profile, scrubKm)
+  const currentIdx = profile.indexOf(current)
+  const dotX = toX(current.km)
+  const dotY = toY(current.ele)
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="gpx-elevation-chart" preserveAspectRatio="none">
-      <polygon points={areaPoints} className="gpx-elevation-area" />
-      <polyline points={linePoints} className="gpx-elevation-line" />
-    </svg>
+    <div className="gpx-elevation">
+      <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="gpx-elevation-chart" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gpxAreaFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" className="gpx-elevation-gradient-start" />
+            <stop offset="100%" className="gpx-elevation-gradient-end" />
+          </linearGradient>
+        </defs>
+        {gridLines.map((ele) => (
+          <g key={ele}>
+            <line
+              x1={MARGIN.left}
+              x2={CHART_W - MARGIN.right}
+              y1={toY(ele)}
+              y2={toY(ele)}
+              className="gpx-elevation-grid"
+            />
+            <text x={MARGIN.left - 6} y={toY(ele)} className="gpx-elevation-axis-label" textAnchor="end" dy="3.5">
+              {Math.round(ele)}
+            </text>
+          </g>
+        ))}
+        <text x={MARGIN.left} y={CHART_H - 4} className="gpx-elevation-axis-label">
+          0 km
+        </text>
+        <text x={CHART_W - MARGIN.right} y={CHART_H - 4} className="gpx-elevation-axis-label" textAnchor="end">
+          {maxKm.toFixed(1)} km
+        </text>
+        <polygon points={areaPoints} fill="url(#gpxAreaFill)" />
+        <polyline points={linePoints} className="gpx-elevation-line" />
+        <line x1={dotX} x2={dotX} y1={MARGIN.top} y2={MARGIN.top + INNER_H} className="gpx-elevation-cursor" />
+        <circle cx={dotX} cy={dotY} r="5" className="gpx-elevation-dot" />
+      </svg>
+      <input
+        type="range"
+        className="gpx-elevation-slider"
+        min={0}
+        max={maxKm}
+        step={maxKm / 500 || 0.01}
+        value={scrubKm}
+        onChange={(e) => setScrubKm(Number(e.target.value))}
+        aria-label="Scorri la traccia"
+      />
+      <div className="gpx-scrub-stats">
+        <span>
+          <strong>{current.km.toFixed(2)}</strong> km
+        </span>
+        <span>
+          <strong>{Math.round(current.ele)}</strong> m quota
+        </span>
+        <span>
+          +<strong>{Math.round(cumGain[currentIdx] ?? 0)}</strong> m finora
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -170,7 +253,7 @@ function GpxTrackView({ url, filename }: { url: string; filename: string }) {
         <>
           <GpxMap segments={segments} />
           <GpxStatsStrip stats={stats} />
-          <ElevationProfile profile={stats.profile} />
+          <ElevationChart profile={stats.profile} />
         </>
       )}
     </div>
