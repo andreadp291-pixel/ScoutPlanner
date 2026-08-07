@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
 import '../../lib/leafletIconFix'
 import { CompassIcon } from '../icons/CompassIcon'
-import { PlusIcon } from '../icons/PlusIcon'
 
 type LatLon = [number, number]
 type Bounds = [LatLon, LatLon]
@@ -103,70 +102,48 @@ function GpxStatsStrip({ stats }: { stats: GpxStats }) {
   )
 }
 
-// Mappa costruita con l'API imperativa di Leaflet (L.map/L.tileLayer/L.polyline),
-// la stessa identica logica dello strumento di verifica indipendente in
-// tools/gpx-tester — invece dei componenti dichiarativi di react-leaflet.
-function GpxMap({ segments, bounds }: { segments: LatLon[][]; bounds: Bounds }) {
+// Mappa copiata letteralmente da tools/gpx-tester/index.html: stessa
+// chiamata L.map() senza opzioni (zoom control e scroll-zoom di default
+// di Leaflet, non i nostri), stesso tile layer, stesso polyline, stesso
+// fitBounds. Nessuna differenza di configurazione rispetto al tester.
+function GpxMap({ segments }: { segments: LatLon[][] }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    const map = L.map(containerRef.current, {
-      zoomControl: false,
-      scrollWheelZoom: false,
-    })
-    mapRef.current = map
+    const map = L.map(containerRef.current)
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
     }).addTo(map)
 
+    const allLatLngs: LatLon[] = []
     segments.forEach((segment) => {
+      allLatLngs.push(...segment)
       L.polyline(segment, { color: '#c0392b', weight: 3 }).addTo(map)
     })
 
-    const allPoints = segments.flat()
-    if (allPoints.length > 0) {
-      L.circleMarker(allPoints[0], {
+    if (allLatLngs.length > 0) {
+      L.circleMarker(allLatLngs[0], {
         radius: 5, color: '#fff', weight: 2, fillColor: '#2e8b57', fillOpacity: 1,
       }).addTo(map)
-      L.circleMarker(allPoints[allPoints.length - 1], {
+      L.circleMarker(allLatLngs[allLatLngs.length - 1], {
         radius: 5, color: '#fff', weight: 2, fillColor: '#c0392b', fillOpacity: 1,
       }).addTo(map)
+      map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] })
     }
-
-    map.fitBounds(bounds, { padding: [30, 30] })
 
     return () => {
       map.remove()
-      mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <div className="gpx-map-wrap">
-      <div ref={containerRef} style={{ height: 320, width: '100%' }} />
-      <div className="map-zoom-control">
-        <button type="button" onClick={() => mapRef.current?.zoomIn()} aria-label="Aumenta zoom">
-          <PlusIcon size={14} />
-        </button>
-        <button type="button" onClick={() => mapRef.current?.zoomOut()} aria-label="Riduci zoom">
-          <span className="map-zoom-minus" />
-        </button>
-      </div>
-      <div className="map-zoom-control map-fit-control">
-        <button
-          type="button"
-          onClick={() => mapRef.current?.fitBounds(bounds, { padding: [30, 30] })}
-          aria-label="Inquadra tutto il percorso"
-          title="Inquadra tutto il percorso"
-        >
-          <CompassIcon size={14} />
-        </button>
-      </div>
+      <div ref={containerRef} style={{ height: 500, width: '100%' }} />
     </div>
   )
 }
@@ -192,7 +169,7 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
       {!error && !stats && <p className="muted">Caricamento traccia…</p>}
       {stats && bounds && (
         <>
-          <GpxMap segments={segments} bounds={bounds} />
+          <GpxMap segments={segments} />
           <GpxStatsStrip stats={stats} />
           <ElevationProfile profile={stats.profile} />
         </>
