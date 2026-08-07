@@ -1252,6 +1252,22 @@ code {
 .poi-search-results {
   max-height: 260px;
 }
+.poi-search-radius-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.poi-search-radius-row label {
+  margin-bottom: 0;
+  flex: 1;
+}
+.poi-search-radius-row select {
+  margin-top: 5px;
+}
+.poi-search-radius-row button {
+  flex-shrink: 0;
+}
 
 .poi-filter-row {
   display: flex;

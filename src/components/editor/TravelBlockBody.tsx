@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { calculateTravelTimeOSRM } from '../../lib/osrm'
 import { calculateTravelTime, hasTomTomKey } from '../../lib/tomtom'
 import { LocationIcon } from '../icons/LocationIcon'
 import type { Block } from './blocks'
@@ -16,6 +17,11 @@ function formatDuration(min: number): string {
 function formatComputedAt(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+const ENGINE_LABEL: Record<'tomtom' | 'osrm', string> = {
+  tomtom: 'TomTom, con traffico in tempo reale',
+  osrm: 'OSRM, stima senza traffico in tempo reale',
 }
 
 export function TravelBlockBody({
@@ -45,10 +51,12 @@ export function TravelBlockBody({
     if (block.originLat == null || block.originLon == null || block.destLat == null || block.destLon == null) return
     setCalculating(true)
     try {
-      const result = await calculateTravelTime(
-        { lat: block.originLat, lon: block.originLon },
-        { lat: block.destLat, lon: block.destLon },
-      )
+      const origin = { lat: block.originLat, lon: block.originLon }
+      const dest = { lat: block.destLat, lon: block.destLon }
+      const useTomTom = hasTomTomKey()
+      const result = useTomTom
+        ? await calculateTravelTime(origin, dest)
+        : { ...(await calculateTravelTimeOSRM(origin, dest)), trafficDelayMin: 0 }
       onUpdate((b) =>
         b.type === 'travel'
           ? {
@@ -57,6 +65,7 @@ export function TravelBlockBody({
               distanceKm: result.distanceKm,
               trafficDelayMin: result.trafficDelayMin,
               computedAt: new Date().toISOString(),
+              engine: useTomTom ? 'tomtom' : 'osrm',
             }
           : b,
       )
@@ -99,7 +108,12 @@ export function TravelBlockBody({
         ) : (
           <p className="muted">Tempo non ancora calcolato.</p>
         )}
-        {block.computedAt && <p className="muted">Calcolato il {formatComputedAt(block.computedAt)}</p>}
+        {block.computedAt && (
+          <p className="muted">
+            Calcolato il {formatComputedAt(block.computedAt)}
+            {block.engine && <> · {ENGINE_LABEL[block.engine]}</>}
+          </p>
+        )}
       </div>
     )
   }
@@ -123,12 +137,12 @@ export function TravelBlockBody({
 
       {!hasTomTomKey() && (
         <p className="muted">
-          Chiave TomTom non configurata: il calcolo del tempo di viaggio non è disponibile (vedi
-          docs/deployment.md).
+          Calcolo con OSRM (gratuito, senza traffico in tempo reale). Configura una chiave TomTom per il traffico
+          reale (vedi docs/deployment.md).
         </p>
       )}
 
-      {hasBothPoints && hasTomTomKey() && (
+      {hasBothPoints && (
         <button type="button" onClick={handleCalculate} disabled={calculating}>
           {calculating ? 'Calcolo…' : block.durationMin != null ? 'Ricalcola tempo di viaggio' : 'Calcola tempo di viaggio'}
         </button>
@@ -154,7 +168,12 @@ export function TravelBlockBody({
           )}
         </div>
       )}
-      {block.computedAt && <p className="muted">Calcolato il {formatComputedAt(block.computedAt)}</p>}
+      {block.computedAt && (
+        <p className="muted">
+          Calcolato il {formatComputedAt(block.computedAt)}
+          {block.engine && <> · {ENGINE_LABEL[block.engine]}</>}
+        </p>
+      )}
 
       {pickerTarget && (
         <LocationPickerModal

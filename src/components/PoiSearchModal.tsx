@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { PoiInput, PoiKind } from '../api/pois'
 import { haversineMeters } from '../lib/geo'
 
-const SEARCH_RADIUS_M = 15000
+const RADIUS_OPTIONS_KM = [5, 10, 15, 25, 50, 100]
+const DEFAULT_RADIUS_KM = 15
 
 const AMENITY_TO_KIND: Record<string, PoiKind> = {
   hospital: 'hospital',
@@ -42,11 +43,11 @@ function buildAddress(tags: Record<string, string>): string {
   return [street && num ? `${street} ${num}` : street, city].filter(Boolean).join(', ')
 }
 
-async function searchOverpass(lat: number, lon: number): Promise<Candidate[]> {
+async function searchOverpass(lat: number, lon: number, radiusM: number): Promise<Candidate[]> {
   const query = `[out:json][timeout:25];(
-    node["amenity"="hospital"](around:${SEARCH_RADIUS_M},${lat},${lon});
-    node["amenity"="pharmacy"](around:${SEARCH_RADIUS_M},${lat},${lon});
-    node["amenity"="fire_station"](around:${SEARCH_RADIUS_M},${lat},${lon});
+    node["amenity"="hospital"](around:${radiusM},${lat},${lon});
+    node["amenity"="pharmacy"](around:${radiusM},${lat},${lon});
+    node["amenity"="fire_station"](around:${radiusM},${lat},${lon});
   );out body;`
 
   const res = await fetch('https://overpass-api.de/api/interpreter', {
@@ -91,13 +92,14 @@ interface PoiSearchModalProps {
 
 export function PoiSearchModal({ campLocation, onImport, onClose }: PoiSearchModalProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM)
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   async function runSearch() {
     setStatus('loading')
     try {
-      const found = await searchOverpass(campLocation.lat, campLocation.lon)
+      const found = await searchOverpass(campLocation.lat, campLocation.lon, radiusKm * 1000)
       setCandidates(found)
       setSelected(new Set(found.map((c) => c.key)))
       setStatus('done')
@@ -139,26 +141,29 @@ export function PoiSearchModal({ campLocation, onImport, onClose }: PoiSearchMod
       <div className="modal poi-search-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Cerca vicino al campo</h2>
         <p className="muted" style={{ marginBottom: 12 }}>
-          Cerca ospedali, farmacie e vigili del fuoco entro {SEARCH_RADIUS_M / 1000} km dalla posizione del campo
-          (dati OpenStreetMap). Rivedi i risultati prima di aggiungerli.
+          Cerca ospedali, farmacie e vigili del fuoco vicino alla posizione del campo (dati OpenStreetMap).
+          Rivedi i risultati prima di aggiungerli.
         </p>
 
-        {status === 'idle' && (
-          <button type="button" className="primary" onClick={runSearch}>
-            Cerca
+        <div className="poi-search-radius-row">
+          <label>
+            Raggio di ricerca
+            <select value={radiusKm} onChange={(e) => setRadiusKm(Number(e.target.value))}>
+              {RADIUS_OPTIONS_KM.map((km) => (
+                <option key={km} value={km}>
+                  {km} km
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="primary" onClick={runSearch} disabled={status === 'loading'}>
+            {status === 'loading' ? 'Ricerca in corso…' : status === 'done' ? 'Cerca di nuovo' : 'Cerca'}
           </button>
-        )}
-        {status === 'loading' && <p className="muted">Ricerca in corso…</p>}
-        {status === 'error' && (
-          <>
-            <p className="muted">Ricerca non riuscita. Riprova.</p>
-            <button type="button" onClick={runSearch}>
-              Riprova
-            </button>
-          </>
-        )}
+        </div>
+
+        {status === 'error' && <p className="muted">Ricerca non riuscita. Riprova.</p>}
         {status === 'done' && candidates.length === 0 && (
-          <p className="muted">Nessun risultato trovato entro {SEARCH_RADIUS_M / 1000} km.</p>
+          <p className="muted">Nessun risultato entro {radiusKm} km. Prova ad allargare il raggio di ricerca.</p>
         )}
         {status === 'done' && candidates.length > 0 && (
           <>

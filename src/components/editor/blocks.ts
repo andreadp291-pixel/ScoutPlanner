@@ -21,6 +21,7 @@ export type Block =
       distanceKm: number | null
       trafficDelayMin: number | null
       computedAt: string | null
+      engine: 'tomtom' | 'osrm' | null
     }
   | { id: string; type: 'divider' }
 
@@ -76,6 +77,7 @@ export function emptyBlock(type: BlockType): Block {
         distanceKm: null,
         trafficDelayMin: null,
         computedAt: null,
+        engine: null,
       }
     case 'divider':
       return { id, type }
