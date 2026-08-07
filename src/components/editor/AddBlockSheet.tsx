@@ -1,4 +1,5 @@
 import type { BlockType } from './blocks'
+import { CompassIcon } from '../icons/CompassIcon'
 import { DividerIcon } from '../icons/DividerIcon'
 import { FileTextIcon } from '../icons/FileTextIcon'
 import { ImageIcon } from '../icons/ImageIcon'
@@ -23,6 +24,7 @@ const OPTIONS: { type: BlockType; label: string; icon: React.ReactNode }[] = [
   { type: 'phone', label: 'Telefono', icon: <PhoneIcon size={22} /> },
   { type: 'location', label: 'Posizione', icon: <LocationIcon size={22} /> },
   { type: 'table', label: 'Tabella', icon: <TableIcon size={22} /> },
+  { type: 'gpx', label: 'Traccia GPX', icon: <CompassIcon size={22} /> },
   { type: 'divider', label: 'Divisore', icon: <DividerIcon size={22} /> },
 ]
 

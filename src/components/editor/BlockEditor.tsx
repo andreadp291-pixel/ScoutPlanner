@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { uploadFile } from '../../api/uploads'
 import { ChevronDownIcon } from '../icons/ChevronDownIcon'
 import { ChevronUpIcon } from '../icons/ChevronUpIcon'
@@ -9,6 +10,7 @@ import { TrashIcon } from '../icons/TrashIcon'
 import { AddBlockSheet } from './AddBlockSheet'
 import type { ActivityDoc, Block, BlockType } from './blocks'
 import { emptyBlock } from './blocks'
+import { GpxBlockBody } from './GpxBlockBody'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
 
 interface BlockEditorProps {
@@ -20,6 +22,27 @@ interface BlockEditorProps {
 
 function isSafeUrl(url: string): boolean {
   return /^(https?:|mailto:|tel:|\/|#)/i.test(url.trim())
+}
+
+// Markdown "leggero" (solo **grassetto**, *corsivo*, ~~barrato~~): niente editor
+// WYSIWYG/contentEditable e niente menu flottanti agganciati alla selezione,
+// che in passato hanno dato problemi di posizionamento sopra mappe/modal.
+const INLINE_REGEX = /(\*\*.+?\*\*|~~.+?~~|\*.+?\*)/g
+
+function renderInline(text: string): ReactNode {
+  const parts = text.split(INLINE_REGEX).filter((p) => p !== '')
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith('~~') && part.endsWith('~~')) {
+      return <s key={i}>{part.slice(2, -2)}</s>
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={i}>{part.slice(1, -1)}</em>
+    }
+    return <Fragment key={i}>{part}</Fragment>
+  })
 }
 
 export function BlockEditor({ projectId, content, editable, onChange }: BlockEditorProps) {
@@ -154,17 +177,7 @@ function BlockBody({ block, editable, projectId, onUpdate, onPickLocation }: Blo
       )
 
     case 'text':
-      return editable ? (
-        <textarea
-          className="block-text-input"
-          value={block.text}
-          placeholder="Scrivi qui…"
-          rows={4}
-          onChange={(e) => onUpdate((b) => (b.type === 'text' ? { ...b, text: e.target.value } : b))}
-        />
-      ) : (
-        <p className="block-text-view">{block.text || <span className="muted">(vuoto)</span>}</p>
-      )
+      return <TextBlockBody block={block} editable={editable} onUpdate={onUpdate} />
 
     case 'list':
       return <ListBlockBody block={block} editable={editable} onUpdate={onUpdate} />
@@ -218,9 +231,71 @@ function BlockBody({ block, editable, projectId, onUpdate, onPickLocation }: Blo
     case 'table':
       return <TableBlockBody block={block} editable={editable} onUpdate={onUpdate} />
 
+    case 'gpx':
+      return <GpxBlockBody block={block} editable={editable} projectId={projectId} onUpdate={onUpdate} />
+
     case 'divider':
       return <hr className="block-divider" />
   }
+}
+
+function TextBlockBody({
+  block,
+  editable,
+  onUpdate,
+}: {
+  block: Extract<Block, { type: 'text' }>
+  editable: boolean
+  onUpdate: (updater: (b: Block) => Block) => void
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function setText(text: string) {
+    onUpdate((b) => (b.type === 'text' ? { ...b, text } : b))
+  }
+
+  function wrap(marker: string) {
+    const el = textareaRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const value = block.text
+    const selected = value.slice(start, end)
+    const next = value.slice(0, start) + marker + selected + marker + value.slice(end)
+    setText(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(start + marker.length, end + marker.length)
+    })
+  }
+
+  if (!editable) {
+    return <p className="block-text-view">{block.text ? renderInline(block.text) : <span className="muted">(vuoto)</span>}</p>
+  }
+
+  return (
+    <div className="block-text-edit">
+      <div className="block-format-bar">
+        <button type="button" onClick={() => wrap('**')} title="Grassetto" aria-label="Grassetto">
+          <b>B</b>
+        </button>
+        <button type="button" onClick={() => wrap('*')} title="Corsivo" aria-label="Corsivo">
+          <i>I</i>
+        </button>
+        <button type="button" onClick={() => wrap('~~')} title="Barrato" aria-label="Barrato">
+          <s>S</s>
+        </button>
+      </div>
+      <textarea
+        ref={textareaRef}
+        className="block-text-input"
+        value={block.text}
+        placeholder="Scrivi qui…"
+        rows={4}
+        onChange={(e) => setText(e.target.value)}
+      />
+    </div>
+  )
 }
 
 function ListBlockBody({
@@ -241,7 +316,7 @@ function ListBlockBody({
     return items.length ? (
       <ul className="block-list-view">
         {items.map((item, i) => (
-          <li key={i}>{item}</li>
+          <li key={i}>{renderInline(item)}</li>
         ))}
       </ul>
     ) : (

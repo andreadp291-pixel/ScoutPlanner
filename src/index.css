@@ -754,6 +754,19 @@ code {
   margin: 0;
 }
 
+.block-text-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.block-format-bar {
+  display: flex;
+  gap: 4px;
+}
+.block-format-bar button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
 .block-text-input {
   font-size: 15px;
   line-height: 1.6;
@@ -872,6 +885,85 @@ code {
 .block-table-controls button {
   padding: 6px 10px;
   font-size: 13px;
+}
+
+.block-gpx-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.block-gpx-edit > button {
+  align-self: flex-start;
+}
+
+.gpx-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-alt);
+  padding: 12px;
+  overflow: hidden;
+}
+.gpx-card-header {
+  margin-bottom: 10px;
+}
+.gpx-attachment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.gpx-map-wrap {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.gpx-stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.gpx-stat {
+  flex: 1;
+  min-width: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+}
+.gpx-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+.gpx-stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+.gpx-elevation-chart {
+  width: 100%;
+  height: 90px;
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+}
+.gpx-elevation-area {
+  fill: var(--accent-bg);
+  stroke: none;
+}
+.gpx-elevation-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
 }
 
 .block-add-btn {

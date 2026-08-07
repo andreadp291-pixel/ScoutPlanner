@@ -3,7 +3,7 @@ import { apiUpload, resolveApiUrl } from './client'
 export interface UploadResult {
   url: string
   filename: string
-  kind: 'image'
+  kind: 'image' | 'gpx'
 }
 
 export async function uploadFile(projectId: number, file: File): Promise<UploadResult> {

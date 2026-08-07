@@ -7,6 +7,7 @@ export type Block =
   | { id: string; type: 'phone'; number: string }
   | { id: string; type: 'location'; name: string; lat: number; lon: number }
   | { id: string; type: 'table'; rows: string[][] }
+  | { id: string; type: 'gpx'; url: string; filename: string }
   | { id: string; type: 'divider' }
 
 export type BlockType = Block['type']
@@ -45,6 +46,8 @@ export function emptyBlock(type: BlockType): Block {
           ['', ''],
         ],
       }
+    case 'gpx':
+      return { id, type, url: '', filename: '' }
     case 'divider':
       return { id, type }
   }
