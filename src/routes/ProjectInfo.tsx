@@ -14,6 +14,7 @@ import { PoiFormModal } from '../components/PoiFormModal'
 import { PoiMap } from '../components/PoiMap'
 import { PoiSearchModal } from '../components/PoiSearchModal'
 import { Spinner } from '../components/Spinner'
+import { useViewModeStore } from '../state/viewModeStore'
 
 const KIND_LABELS: Record<PoiKind, string> = {
   hospital: 'Ospedale',
@@ -30,6 +31,7 @@ export function ProjectInfo() {
   const id = Number(projectId)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const globalMode = useViewModeStore((s) => s.mode)
   const [showLocationPicker, setShowLocationPicker] = useState(false)
   const [poiFormTarget, setPoiFormTarget] = useState<PoiFormTarget>(null)
   const [showPoiSearch, setShowPoiSearch] = useState(false)
@@ -40,7 +42,7 @@ export function ProjectInfo() {
   const poisQuery = useQuery({ queryKey: ['pois', id], queryFn: () => listPois(id) })
   const pagesQuery = useQuery({ queryKey: ['pages', id], queryFn: () => listPages(id) })
 
-  const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
+  const canEdit = (accessQuery.data ? accessQuery.data.role !== 'viewer' : false) && globalMode === 'edit'
 
   const setLocationMutation = useMutation({
     mutationFn: (picked: PickedLocation) => setLocation(id, picked),

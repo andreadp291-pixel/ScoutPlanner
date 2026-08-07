@@ -11,8 +11,9 @@ import { MemberLogin } from './routes/MemberLogin'
 import { MemberProjectList } from './routes/MemberProjectList'
 import { OwnerLogin } from './routes/OwnerLogin'
 import { OwnerSetPassword } from './routes/OwnerSetPassword'
-import { ProjectCalendar } from './routes/ProjectCalendar'
 import { ProjectCreate } from './routes/ProjectCreate'
+import { ProjectFullCalendarView } from './routes/ProjectFullCalendarView'
+import { ProjectHome } from './routes/ProjectHome'
 import { ProjectInfo } from './routes/ProjectInfo'
 import { ProjectList } from './routes/ProjectList'
 import { ProjectPageEditor } from './routes/ProjectPageEditor'
@@ -106,7 +107,8 @@ function App() {
                 }
               />
               {/* Raggiungibile da owner, membri con account, o chi ha un token di condivisione (?t=...) */}
-              <Route path="/projects/:projectId" element={<ProjectCalendar />} />
+              <Route path="/projects/:projectId" element={<ProjectHome />} />
+              <Route path="/projects/:projectId/calendar" element={<ProjectFullCalendarView />} />
               <Route
                 path="/projects/:projectId/activities/:activityId/description"
                 element={<ActivityDescription />}

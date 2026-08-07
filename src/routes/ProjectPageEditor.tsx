@@ -10,12 +10,14 @@ import { parseActivityDoc } from '../components/editor/blocks'
 import { dateRange, formatShortDate } from '../components/calendar/time'
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { Spinner } from '../components/Spinner'
+import { useViewModeStore } from '../state/viewModeStore'
 
 export function ProjectPageEditor() {
   const { projectId, pageId } = useParams()
   const id = Number(projectId)
   const pid = Number(pageId)
   const queryClient = useQueryClient()
+  const globalMode = useViewModeStore((s) => s.mode)
   const [pendingContent, setPendingContent] = useState<ActivityDoc | null>(null)
   const [title, setTitle] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -43,7 +45,7 @@ export function ProjectPageEditor() {
   }
 
   const page = pageQuery.data
-  const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
+  const canEdit = (accessQuery.data ? accessQuery.data.role !== 'viewer' : false) && globalMode === 'edit'
   const currentContent = pendingContent ?? parseActivityDoc(page.content)
   const currentTitle = title ?? page.title
   const presetDays = projectQuery.data

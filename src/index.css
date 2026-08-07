@@ -1302,3 +1302,26 @@ code {
   font-weight: 500;
   margin: 0;
 }
+
+/* --- modalità visualizza: barra attività corrente --- */
+.current-activity-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-sm);
+  font-size: 16px;
+  text-align: left;
+  animation: riseIn var(--duration) var(--ease);
+}
+.current-activity-bar:hover {
+  border-color: var(--accent);
+}
+.current-activity-bar strong {
+  color: var(--text-h);
+}

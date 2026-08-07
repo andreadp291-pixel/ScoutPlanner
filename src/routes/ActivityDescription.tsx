@@ -10,12 +10,14 @@ import type { ActivityDoc } from '../components/editor/blocks'
 import { parseActivityDoc } from '../components/editor/blocks'
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { Spinner } from '../components/Spinner'
+import { useViewModeStore } from '../state/viewModeStore'
 
 export function ActivityDescription() {
   const { projectId, activityId } = useParams()
   const id = Number(projectId)
   const actId = Number(activityId)
   const queryClient = useQueryClient()
+  const globalMode = useViewModeStore((s) => s.mode)
   const [pendingContent, setPendingContent] = useState<ActivityDoc | null>(null)
   const [materials, setMaterials] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -58,7 +60,7 @@ export function ActivityDescription() {
   }
 
   const activity = activityQuery.data
-  const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
+  const canEdit = (accessQuery.data ? accessQuery.data.role !== 'viewer' : false) && globalMode === 'edit'
   const currentContent = pendingContent ?? parseActivityDoc(activity.description)
   const currentMaterials = materials ?? activity.materials
   const presetDays = projectQuery.data
