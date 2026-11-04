@@ -79,11 +79,13 @@ def require_project_role(min_role: str):
                 member_data = verify_member_session_token(token, max_age=MEMBER_SESSION_MAX_AGE)
                 if member_data is not None:
                     member_row = conn.execute(
-                        "SELECT id, display_name, token_version FROM members WHERE id = ?",
+                        "SELECT id, display_name, token_version, must_change_password FROM members WHERE id = ?",
                         (member_data["mid"],),
                     ).fetchone()
                     if member_row is None or member_row["token_version"] != member_data["tv"]:
                         raise HTTPException(status_code=401, detail="Sessione non più valida, effettua di nuovo il login")
+                    if member_row["must_change_password"]:
+                        raise HTTPException(status_code=403, detail="Imposta prima una password personale")
                     pm = conn.execute(
                         "SELECT role FROM project_members WHERE project_id = ? AND member_id = ?",
                         (project_id, member_row["id"]),

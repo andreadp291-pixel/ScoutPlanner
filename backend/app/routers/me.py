@@ -8,7 +8,7 @@ router = APIRouter(prefix="/me", tags=["me"])
 
 
 @router.get("/projects", response_model=list[MemberProjectOut])
-async def my_projects(member: dict = Depends(require_member_session)):
+def my_projects(member: dict = Depends(require_member_session)):
     with get_conn() as conn:
         rows = conn.execute(
             """SELECT p.id AS id, p.name AS name, p.start_date AS start_date, p.end_date AS end_date,

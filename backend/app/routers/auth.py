@@ -28,7 +28,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/request-link", status_code=202)
-async def request_link(body: RequestLinkIn):
+def request_link(body: RequestLinkIn, request: Request):
+    # Senza limite chiunque potrebbe usare l'SMTP per spedire email a un indirizzo a caso.
+    _check_rate_limit(request, body.email)
+    _record_login_attempt(request, body.email)
     token = create_magic_link_token(body.email)
     link_url = f"{FRONTEND_BASE_URL}/#/auth/callback?token={token}"
     send_magic_link_email(body.email, link_url)
@@ -36,7 +39,7 @@ async def request_link(body: RequestLinkIn):
 
 
 @router.get("/verify")
-async def verify(token: str = Query(...)):
+def verify(token: str = Query(...)):
     email = verify_magic_link_token(token, max_age=MAGIC_LINK_MAX_AGE)
     if email is None:
         raise HTTPException(status_code=401, detail="Link non valido o scaduto")
@@ -59,7 +62,10 @@ def _check_rate_limit(request: Request, email: str) -> None:
     key = _rate_limit_key(request, email)
     now = time.time()
     attempts = [t for t in _login_attempts.get(key, []) if now - t < LOGIN_WINDOW_SECONDS]
-    _login_attempts[key] = attempts
+    if attempts:
+        _login_attempts[key] = attempts
+    else:
+        _login_attempts.pop(key, None)  # evita che il dizionario cresca per sempre
     if len(attempts) >= LOGIN_MAX_ATTEMPTS:
         raise HTTPException(status_code=429, detail="Troppi tentativi, riprova tra qualche minuto")
 
@@ -70,7 +76,7 @@ def _record_login_attempt(request: Request, email: str) -> None:
 
 
 @router.post("/member/login", response_model=MemberSessionOut)
-async def member_login(body: MemberLoginIn, request: Request):
+def member_login(body: MemberLoginIn, request: Request):
     _check_rate_limit(request, body.email)
     _record_login_attempt(request, body.email)
 
@@ -97,7 +103,7 @@ async def member_login(body: MemberLoginIn, request: Request):
 
 
 @router.post("/member/change-password", response_model=MemberSessionOut)
-async def member_change_password(body: MemberChangePasswordIn, member: dict = Depends(require_member_session)):
+def member_change_password(body: MemberChangePasswordIn, member: dict = Depends(require_member_session)):
     new_hash = ph.hash(body.new_password)
     with get_conn() as conn:
         conn.execute(
@@ -116,7 +122,7 @@ async def member_change_password(body: MemberChangePasswordIn, member: dict = De
 
 
 @router.post("/owner/set-password", response_model=OwnerSessionOut)
-async def owner_set_password(body: OwnerSetPasswordIn, email: str = Depends(require_owner_session)):
+def owner_set_password(body: OwnerSetPasswordIn, email: str = Depends(require_owner_session)):
     new_hash = ph.hash(body.new_password)
     with get_conn() as conn:
         conn.execute(
@@ -134,7 +140,7 @@ async def owner_set_password(body: OwnerSetPasswordIn, email: str = Depends(requ
 
 
 @router.post("/owner/login", response_model=OwnerSessionOut)
-async def owner_login(body: OwnerLoginIn, request: Request):
+def owner_login(body: OwnerLoginIn, request: Request):
     _check_rate_limit(request, body.email)
     _record_login_attempt(request, body.email)
 
@@ -144,9 +150,8 @@ async def owner_login(body: OwnerLoginIn, request: Request):
         ).fetchone()
 
     if row is None or row["password_hash"] is None:
-        raise HTTPException(
-            status_code=401, detail="Password non impostata per questo account: usa il magic link"
-        )
+        # Stesso messaggio di una password sbagliata: non rivela quali email sono owner.
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
 
     try:
         ph.verify(row["password_hash"], body.password)

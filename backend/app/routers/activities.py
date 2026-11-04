@@ -7,6 +7,13 @@ from ..schemas import ActivityCreateIn, ActivityOut, ActivitySwapIn, ActivityUpd
 router = APIRouter(prefix="/projects/{project_id}/activities", tags=["activities"])
 
 
+def _check_times(start_at: str, end_at: str) -> None:
+    if end_at <= start_at:
+        raise HTTPException(400, "L'ora di fine deve essere dopo quella di inizio")
+    if start_at[:10] != end_at[:10]:
+        raise HTTPException(400, "Un'attività deve iniziare e finire nello stesso giorno")
+
+
 def _check_no_overlap(conn, project_id: int, exclude_id: int | None, start_at: str, end_at: str) -> None:
     date_part = start_at[:10]
     row = conn.execute(
@@ -50,7 +57,7 @@ def _activity_out(conn, row) -> dict:
 
 
 @router.get("", response_model=list[ActivityOut])
-async def list_activities(actor: Actor = Depends(require_project_role("viewer"))):
+def list_activities(actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM activities WHERE project_id = ? ORDER BY start_at", (actor.project_id,)
@@ -59,7 +66,7 @@ async def list_activities(actor: Actor = Depends(require_project_role("viewer"))
 
 
 @router.get("/{activity_id}", response_model=ActivityOut)
-async def get_activity(activity_id: int, actor: Actor = Depends(require_project_role("viewer"))):
+def get_activity(activity_id: int, actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         row = conn.execute(
             "SELECT * FROM activities WHERE id = ? AND project_id = ?", (activity_id, actor.project_id)
@@ -70,7 +77,8 @@ async def get_activity(activity_id: int, actor: Actor = Depends(require_project_
 
 
 @router.post("", response_model=ActivityOut, status_code=201)
-async def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require_project_role("editor"))):
+def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require_project_role("editor"))):
+    _check_times(body.start_at, body.end_at)
     with get_conn() as conn:
         _check_no_overlap(conn, actor.project_id, None, body.start_at, body.end_at)
         cur = conn.execute(
@@ -89,7 +97,7 @@ async def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require
 
 
 @router.post("/swap", response_model=list[ActivityOut])
-async def swap_activities(body: ActivitySwapIn, actor: Actor = Depends(require_project_role("editor"))):
+def swap_activities(body: ActivitySwapIn, actor: Actor = Depends(require_project_role("editor"))):
     if body.id_a == body.id_b:
         raise HTTPException(400, "id_a e id_b devono essere diversi")
     with get_conn() as conn:
@@ -113,11 +121,11 @@ async def swap_activities(body: ActivitySwapIn, actor: Actor = Depends(require_p
             "SELECT * FROM activities WHERE id IN (?, ?) AND project_id = ?",
             (body.id_a, body.id_b, actor.project_id),
         ).fetchall()
-    return [dict(r) for r in result]
+        return [_activity_out(conn, r) for r in result]
 
 
 @router.patch("/{activity_id}", response_model=ActivityOut)
-async def update_activity(
+def update_activity(
     activity_id: int, body: ActivityUpdateIn, actor: Actor = Depends(require_project_role("editor"))
 ):
     fields = body.model_dump(exclude_unset=True)
@@ -131,6 +139,7 @@ async def update_activity(
         if "start_at" in fields or "end_at" in fields:
             new_start = fields.get("start_at", current["start_at"])
             new_end = fields.get("end_at", current["end_at"])
+            _check_times(new_start, new_end)
             _check_no_overlap(conn, actor.project_id, activity_id, new_start, new_end)
         if fields:
             set_parts = [f"{k} = ?" for k in fields] + ["updated_at = datetime('now')"]
@@ -148,7 +157,7 @@ async def update_activity(
 
 
 @router.delete("/{activity_id}", status_code=204)
-async def delete_activity(activity_id: int, actor: Actor = Depends(require_project_role("editor"))):
+def delete_activity(activity_id: int, actor: Actor = Depends(require_project_role("editor"))):
     with get_conn() as conn:
         conn.execute(
             "DELETE FROM activities WHERE id = ? AND project_id = ?", (activity_id, actor.project_id)

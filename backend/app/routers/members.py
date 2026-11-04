@@ -15,7 +15,7 @@ MEMBER_FIELDS = """
 
 
 @router.get("", response_model=list[MemberOut])
-async def list_members(actor: Actor = Depends(require_project_role("owner"))):
+def list_members(actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         rows = conn.execute(
             f"""SELECT {MEMBER_FIELDS} FROM project_members pm
@@ -27,7 +27,7 @@ async def list_members(actor: Actor = Depends(require_project_role("owner"))):
 
 
 @router.post("", response_model=MemberOut, status_code=201)
-async def invite_member(body: MemberInviteIn, actor: Actor = Depends(require_project_role("owner"))):
+def invite_member(body: MemberInviteIn, actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         project = conn.execute("SELECT name FROM projects WHERE id = ?", (actor.project_id,)).fetchone()
 
@@ -43,10 +43,13 @@ async def invite_member(body: MemberInviteIn, actor: Actor = Depends(require_pro
                 (body.email, body.person_name, password_hash),
             )
             member_id = cur.lastrowid
-            send_member_invite_email(body.email, body.person_name, project["name"], temp_password)
+            sent = send_member_invite_email(body.email, body.person_name, project["name"], temp_password)
         else:
             member_id = existing_member["id"]
-            send_member_added_to_project_email(body.email, existing_member["display_name"], project["name"])
+            sent = send_member_added_to_project_email(body.email, existing_member["display_name"], project["name"])
+        if not sent:
+            # L'eccezione annulla la transazione: niente membro creato con una password mai arrivata.
+            raise HTTPException(status_code=502, detail="Invio email fallito, riprova più tardi")
 
         existing_link = conn.execute(
             "SELECT id FROM project_members WHERE project_id = ? AND member_id = ?",
@@ -72,7 +75,7 @@ async def invite_member(body: MemberInviteIn, actor: Actor = Depends(require_pro
 
 
 @router.patch("/{project_member_id}", response_model=MemberOut)
-async def update_member_role(
+def update_member_role(
     project_member_id: int, body: MemberRoleUpdateIn, actor: Actor = Depends(require_project_role("owner"))
 ):
     with get_conn() as conn:
@@ -93,7 +96,7 @@ async def update_member_role(
 
 
 @router.post("/{project_member_id}/reset-password", response_model=MemberOut)
-async def reset_member_password(project_member_id: int, actor: Actor = Depends(require_project_role("owner"))):
+def reset_member_password(project_member_id: int, actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         row = conn.execute(
             """SELECT m.id AS member_id, m.email AS email, m.display_name AS display_name
@@ -110,7 +113,8 @@ async def reset_member_password(project_member_id: int, actor: Actor = Depends(r
             "UPDATE members SET password_hash = ?, must_change_password = 1, token_version = token_version + 1 WHERE id = ?",
             (password_hash, row["member_id"]),
         )
-        send_password_reset_email(row["email"], row["display_name"], temp_password)
+        if not send_password_reset_email(row["email"], row["display_name"], temp_password):
+            raise HTTPException(status_code=502, detail="Invio email fallito, riprova più tardi")
 
         out = conn.execute(
             f"""SELECT {MEMBER_FIELDS} FROM project_members pm
@@ -122,7 +126,7 @@ async def reset_member_password(project_member_id: int, actor: Actor = Depends(r
 
 
 @router.delete("/{project_member_id}", status_code=204)
-async def remove_member(project_member_id: int, actor: Actor = Depends(require_project_role("owner"))):
+def remove_member(project_member_id: int, actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         row = conn.execute(
             "SELECT id FROM project_members WHERE id = ? AND project_id = ?",

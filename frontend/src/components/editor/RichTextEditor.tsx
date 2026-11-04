@@ -15,6 +15,7 @@ import { LinkIcon } from '../icons/LinkIcon'
 import { LocationIcon } from '../icons/LocationIcon'
 import { PhoneIcon } from '../icons/PhoneIcon'
 import { QuoteIcon } from '../icons/QuoteIcon'
+import { isSafeUrl } from '../../lib/url'
 import { GpxAttachment } from './GpxAttachmentExtension'
 import { GpxChoiceModal } from './GpxChoiceModal'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
@@ -88,10 +89,6 @@ export function RichTextEditor({ projectId, content, editable, onChange }: RichT
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Errore durante il caricamento del file GPX')
     }
-  }
-
-  function isSafeUrl(url: string): boolean {
-    return /^(https?:|mailto:|tel:|\/|#)/i.test(url.trim())
   }
 
   function handleImageUrl() {

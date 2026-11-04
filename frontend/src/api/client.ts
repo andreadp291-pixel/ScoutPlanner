@@ -42,6 +42,15 @@ function resolveToken(options: RequestOptions): string | null {
   return useAuthStore.getState().sessionToken
 }
 
+// Sessione scaduta o invalidata (es. password cambiata altrove): la si elimina e si torna al
+// login. Un token di condivisione rifiutato (revocato) invece non è una sessione: si lascia stare.
+function dropExpiredSession(token: string, options: RequestOptions) {
+  if (options.projectId !== undefined && token === useProjectAccessStore.getState().getToken(options.projectId)) return
+  if (token === useMemberAuthStore.getState().sessionToken) useMemberAuthStore.getState().logout()
+  else if (token === useAuthStore.getState().sessionToken) useAuthStore.getState().logout()
+  window.location.hash = '#/login'
+}
+
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body } = options
   const token = resolveToken(options)
@@ -57,6 +66,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   })
 
   if (!res.ok) {
+    if (res.status === 401 && token) dropExpiredSession(token, options)
     const detail = await res.json().catch(() => ({ detail: res.statusText }))
     throw new ApiError(res.status, detail.detail ?? res.statusText)
   }

@@ -9,7 +9,8 @@ from ..schemas import UploadOut
 
 router = APIRouter(prefix="/projects/{project_id}/uploads", tags=["uploads"])
 
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+# Niente .svg: aperto direttamente dal browser può eseguire script sul dominio dell'API.
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 GPX_EXTENSIONS = {".gpx"}
 
 
@@ -25,9 +26,14 @@ async def upload_file(file: UploadFile, actor: Actor = Depends(require_project_r
     else:
         raise HTTPException(400, "Tipo di file non supportato")
 
-    body = await file.read()
-    if len(body) > MAX_UPLOAD_BYTES:
-        raise HTTPException(400, "File troppo grande (max 15 MB)")
+    # Lettura a blocchi: ci si ferma al limite invece di caricare tutto il file in memoria.
+    chunks, size = [], 0
+    while chunk := await file.read(1024 * 1024):
+        size += len(chunk)
+        if size > MAX_UPLOAD_BYTES:
+            raise HTTPException(400, "File troppo grande (max 15 MB)")
+        chunks.append(chunk)
+    body = b"".join(chunks)
 
     project_dir = os.path.join(UPLOADS_DIR, str(actor.project_id))
     os.makedirs(project_dir, exist_ok=True)

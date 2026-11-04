@@ -11,7 +11,7 @@ TOKEN_FIELDS = "id, person_name, role, revoked_at, created_at, last_used_at"
 
 
 @router.get("", response_model=list[TokenOut])
-async def list_tokens(actor: Actor = Depends(require_project_role("owner"))):
+def list_tokens(actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         rows = conn.execute(
             f"SELECT {TOKEN_FIELDS} FROM project_tokens WHERE project_id = ? ORDER BY created_at",
@@ -21,7 +21,7 @@ async def list_tokens(actor: Actor = Depends(require_project_role("owner"))):
 
 
 @router.post("", response_model=TokenCreatedOut, status_code=201)
-async def create_token(body: TokenCreateIn, actor: Actor = Depends(require_project_role("owner"))):
+def create_token(body: TokenCreateIn, actor: Actor = Depends(require_project_role("owner"))):
     raw_token = generate_share_token()
     token_hash = hash_share_token(raw_token)
     with get_conn() as conn:
@@ -37,7 +37,7 @@ async def create_token(body: TokenCreateIn, actor: Actor = Depends(require_proje
 
 
 @router.post("/{token_id}/regenerate", response_model=TokenCreatedOut)
-async def regenerate_token(token_id: int, actor: Actor = Depends(require_project_role("owner"))):
+def regenerate_token(token_id: int, actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         existing = conn.execute(
             f"SELECT {TOKEN_FIELDS} FROM project_tokens WHERE id = ? AND project_id = ?",
@@ -59,7 +59,7 @@ async def regenerate_token(token_id: int, actor: Actor = Depends(require_project
 
 
 @router.delete("/{token_id}", status_code=204)
-async def revoke_token(token_id: int, actor: Actor = Depends(require_project_role("owner"))):
+def revoke_token(token_id: int, actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         row = conn.execute(
             "SELECT id FROM project_tokens WHERE id = ? AND project_id = ?", (token_id, actor.project_id)

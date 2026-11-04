@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { useEffect, useRef, useState } from 'react'
 import { downsample, parseGpx, type GpxStats } from '../../lib/gpx'
 import '../../lib/leafletIconFix'
+import { isHttpUrl } from '../../lib/url'
 import { CompassIcon } from '../icons/CompassIcon'
 
 type LatLon = [number, number]
@@ -61,8 +62,16 @@ function useGpxStats(url: string) {
     let cancelled = false
     setStats(null)
     setError(null)
+    // L'url arriva dal contenuto salvato, che un editor può scrivere a mano: va controllato.
+    if (!isHttpUrl(url)) {
+      setError('Allegato non valido')
+      return
+    }
     fetch(url)
-      .then((res) => res.text())
+      .then((res) => {
+        if (!res.ok) throw new Error(res.statusText)
+        return res.text()
+      })
       .then((text) => {
         if (!cancelled) setStats(parseGpx(text))
       })
@@ -161,9 +170,15 @@ export function GpxAttachmentView({ node }: NodeViewProps) {
   return (
     <NodeViewWrapper className="gpx-card">
       <div className="gpx-card-header">
-        <a href={url} download={filename} className="gpx-attachment-link">
-          <CompassIcon /> {filename}
-        </a>
+        {isHttpUrl(url) ? (
+          <a href={url} download={filename} className="gpx-attachment-link">
+            <CompassIcon /> {filename}
+          </a>
+        ) : (
+          <span className="gpx-attachment-link">
+            <CompassIcon /> {filename}
+          </span>
+        )}
       </div>
       {error && <p className="muted">{error}</p>}
       {!error && !stats && <p className="muted">Caricamento traccia…</p>}

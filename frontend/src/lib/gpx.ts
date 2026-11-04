@@ -35,8 +35,9 @@ export function downsample<T>(arr: T[], maxPoints: number): T[] {
 }
 
 function parsePoint(el: Element): GpxPoint {
-  const lat = parseFloat(el.getAttribute('lat') ?? '0')
-  const lon = parseFloat(el.getAttribute('lon') ?? '0')
+  // Coordinate mancanti: NaN (poi scartato), non 0,0 che finirebbe in mezzo all'oceano.
+  const lat = parseFloat(el.getAttribute('lat') ?? '')
+  const lon = parseFloat(el.getAttribute('lon') ?? '')
   const eleEl = el.getElementsByTagName('ele')[0]
   const ele = eleEl ? parseFloat(eleEl.textContent ?? '') : NaN
   return { lat, lon, ele: Number.isFinite(ele) ? ele : null }
@@ -57,7 +58,9 @@ export function parseGpx(xmlText: string): GpxStats {
     const source = trkpts.length > 0 ? trkpts : Array.from(doc.getElementsByTagName('rtept'))
     segments = source.length > 0 ? [source.map(parsePoint)] : []
   }
-  segments = segments.filter((s) => s.length > 0)
+  segments = segments
+    .map((s) => s.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon)))
+    .filter((s) => s.length > 0)
 
   let cumKm = 0
   let elevationGainM = 0

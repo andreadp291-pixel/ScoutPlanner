@@ -10,7 +10,7 @@ logger = logging.getLogger("scoutplanner.mail")
 def _send(to_email: str, subject: str, body: str) -> bool:
     if not (SMTP_USER and SMTP_PASSWORD):
         logger.info("SMTP non configurato. Email per %s:\n%s\n%s", to_email, subject, body)
-        return False
+        return True  # sviluppo locale: l'email resta nel log e conta come inviata
 
     msg = EmailMessage()
     msg["Subject"] = subject

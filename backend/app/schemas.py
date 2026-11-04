@@ -1,8 +1,27 @@
-from pydantic import BaseModel, EmailStr, Field
+from datetime import date, datetime
+from typing import Annotated
+
+from pydantic import AfterValidator, BaseModel, EmailStr, Field, model_validator
+
+
+def _iso_date(v: str) -> str:
+    date.fromisoformat(v)
+    return v
+
+
+def _iso_datetime(v: str) -> str:
+    datetime.strptime(v, "%Y-%m-%dT%H:%M")
+    return v
+
+
+# Le email vanno in minuscolo: "Andrea@x.it" e "andrea@x.it" sono la stessa persona.
+Email = Annotated[EmailStr, AfterValidator(str.lower)]
+IsoDate = Annotated[str, AfterValidator(_iso_date)]  # 'YYYY-MM-DD'
+IsoDateTime = Annotated[str, AfterValidator(_iso_datetime)]  # 'YYYY-MM-DDTHH:MM'
 
 
 class RequestLinkIn(BaseModel):
-    email: EmailStr
+    email: Email
 
 
 class OwnerSessionOut(BaseModel):
@@ -15,20 +34,20 @@ class OwnerSetPasswordIn(BaseModel):
 
 
 class OwnerLoginIn(BaseModel):
-    email: EmailStr
+    email: Email
     password: str
 
 
 class ProjectCreateIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    start_date: str  # 'YYYY-MM-DD'
-    end_date: str    # 'YYYY-MM-DD'
+    start_date: IsoDate
+    end_date: IsoDate
 
 
 class ProjectUpdateIn(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
-    start_date: str | None = None
-    end_date: str | None = None
+    start_date: IsoDate | None = None
+    end_date: IsoDate | None = None
 
 
 class ProjectOut(BaseModel):
@@ -47,21 +66,29 @@ class ActivityCreateIn(BaseModel):
     category: str
     color: str
     materials: str = ""
-    start_at: str  # 'YYYY-MM-DDTHH:MM'
-    end_at: str
+    start_at: IsoDateTime
+    end_at: IsoDateTime
     group_ids: list[int] = []
 
 
 class ActivityUpdateIn(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
     location: str | None = None
     category: str | None = None
     color: str | None = None
     materials: str | None = None
-    start_at: str | None = None
-    end_at: str | None = None
+    start_at: IsoDateTime | None = None
+    end_at: IsoDateTime | None = None
     group_ids: list[int] | None = None
+
+    @model_validator(mode="after")
+    def no_explicit_null(self):
+        # Le colonne sono NOT NULL: un "null" esplicito darebbe un errore 500 sul database.
+        for name in self.model_fields_set - {"group_ids"}:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} non può essere null")
+        return self
 
 
 class GroupCreateIn(BaseModel):
@@ -123,7 +150,7 @@ class TokenCreatedOut(TokenOut):
 
 class MemberInviteIn(BaseModel):
     person_name: str = Field(min_length=1, max_length=100)
-    email: EmailStr
+    email: Email
     role: str = Field(pattern="^(editor|viewer)$")
 
 
@@ -141,7 +168,7 @@ class MemberOut(BaseModel):
 
 
 class MemberLoginIn(BaseModel):
-    email: EmailStr
+    email: Email
     password: str
 
 

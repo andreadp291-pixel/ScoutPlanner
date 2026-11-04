@@ -8,7 +8,7 @@ router = APIRouter(prefix="/projects/{project_id}/groups", tags=["groups"])
 
 
 @router.get("", response_model=list[GroupOut])
-async def list_groups(actor: Actor = Depends(require_project_role("viewer"))):
+def list_groups(actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT * FROM groups WHERE project_id = ? ORDER BY name", (actor.project_id,)
@@ -17,7 +17,7 @@ async def list_groups(actor: Actor = Depends(require_project_role("viewer"))):
 
 
 @router.post("", response_model=GroupOut, status_code=201)
-async def create_group(body: GroupCreateIn, actor: Actor = Depends(require_project_role("editor"))):
+def create_group(body: GroupCreateIn, actor: Actor = Depends(require_project_role("editor"))):
     with get_conn() as conn:
         cur = conn.execute(
             "INSERT INTO groups (project_id, name) VALUES (?, ?)", (actor.project_id, body.name)
@@ -27,7 +27,7 @@ async def create_group(body: GroupCreateIn, actor: Actor = Depends(require_proje
 
 
 @router.patch("/{group_id}", response_model=GroupOut)
-async def rename_group(
+def rename_group(
     group_id: int, body: GroupCreateIn, actor: Actor = Depends(require_project_role("editor"))
 ):
     with get_conn() as conn:
@@ -42,6 +42,6 @@ async def rename_group(
 
 
 @router.delete("/{group_id}", status_code=204)
-async def delete_group(group_id: int, actor: Actor = Depends(require_project_role("editor"))):
+def delete_group(group_id: int, actor: Actor = Depends(require_project_role("editor"))):
     with get_conn() as conn:
         conn.execute("DELETE FROM groups WHERE id = ? AND project_id = ?", (group_id, actor.project_id))

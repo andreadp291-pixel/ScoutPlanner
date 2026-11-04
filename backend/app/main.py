@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +9,13 @@ from .config import FRONTEND_ORIGIN, UPLOADS_DIR
 from .db import init_db
 from .routers import activities, auth, groups, me, members, projects, tokens, uploads
 
-app = FastAPI(title="ScoutPlanner API")
+@asynccontextmanager
+async def lifespan(_app):
+    init_db()
+    yield
+
+
+app = FastAPI(title="ScoutPlanner API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,11 +35,6 @@ app.include_router(uploads.router)
 app.include_router(tokens.router)
 app.include_router(members.router)
 app.include_router(me.router)
-
-
-@app.on_event("startup")
-async def on_startup():
-    init_db()
 
 
 @app.get("/health")
