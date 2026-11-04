@@ -7,7 +7,19 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import FRONTEND_ORIGIN, UPLOADS_DIR
 from .db import init_db
-from .routers import activities, auth, groups, me, members, projects, tokens, uploads
+from .routers import (
+    activities,
+    auth,
+    groups,
+    me,
+    members,
+    project_location,
+    project_pages,
+    project_pois,
+    projects,
+    tokens,
+    uploads,
+)
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -35,6 +47,9 @@ app.include_router(uploads.router)
 app.include_router(tokens.router)
 app.include_router(members.router)
 app.include_router(me.router)
+app.include_router(project_location.router)
+app.include_router(project_pois.router)
+app.include_router(project_pages.router)
 
 
 @app.get("/health")

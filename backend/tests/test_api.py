@@ -89,3 +89,15 @@ def test_owner_login_does_not_reveal_accounts(client):
 def test_upload_rejects_svg(client, project):
     r = client.post(f"/projects/{project}/uploads", files={"file": ("a.svg", b"<svg/>")}, headers=owner())
     assert r.status_code == 400
+
+
+def test_poi_and_page_routers(client, project):
+    h = owner()
+    poi = client.post(f"/projects/{project}/pois", json={"kind": "hospital", "name": "H"}, headers=h)
+    assert poi.status_code == 201
+    pid = poi.json()["id"]
+    assert client.patch(f"/projects/{project}/pois/{pid}", json={"name": None}, headers=h).status_code == 422
+    assert client.patch(f"/projects/{project}/pois/{pid}", json={"lat": 1.5, "lon": 2.5}, headers=h).status_code == 200
+    page = client.post(f"/projects/{project}/pages", json={"title": "T"}, headers=h)
+    assert page.status_code == 201
+    assert client.get(f"/projects/{project}/pages", headers=h).status_code == 200

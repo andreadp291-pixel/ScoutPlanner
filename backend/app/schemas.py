@@ -188,3 +188,86 @@ class MemberProjectOut(BaseModel):
     start_date: str
     end_date: str
     role: str
+
+
+class ProjectLocationIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    lat: float
+    lon: float
+
+
+class ProjectLocationOut(BaseModel):
+    project_id: int
+    name: str
+    lat: float
+    lon: float
+    updated_at: str
+
+
+class PoiCreateIn(BaseModel):
+    kind: str = Field(pattern="^(hospital|pharmacy|fire_station|other)$")
+    name: str = Field(min_length=1, max_length=200)
+    phone: str = ""
+    address: str = ""
+    lat: float | None = None
+    lon: float | None = None
+    notes: str = ""
+    hours: str = ""
+
+
+class PoiUpdateIn(BaseModel):
+    kind: str | None = Field(default=None, pattern="^(hospital|pharmacy|fire_station|other)$")
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    phone: str | None = None
+    address: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    notes: str | None = None
+    hours: str | None = None
+    @model_validator(mode="after")
+    def no_explicit_null(self):
+        for name in self.model_fields_set - {"lat", "lon"}:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} non può essere null")
+        return self
+
+
+class PoiOut(BaseModel):
+    id: int
+    project_id: int
+    kind: str
+    name: str
+    phone: str
+    address: str
+    lat: float | None
+    lon: float | None
+    notes: str
+    hours: str
+    created_at: str
+
+
+class PageCreateIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = ""
+
+
+class PageUpdateIn(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    content: str | None = None
+    @model_validator(mode="after")
+    def no_explicit_null(self):
+        for name in self.model_fields_set - {"lat", "lon"}:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} non può essere null")
+        return self
+
+
+class PageOut(BaseModel):
+    id: int
+    project_id: int
+    title: str
+    content: str
+    position: int
+    created_by: str
+    created_at: str
+    updated_at: str

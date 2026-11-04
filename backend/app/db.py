@@ -88,12 +88,52 @@ CREATE TABLE IF NOT EXISTS activity_groups (
     PRIMARY KEY (activity_id, group_id)
 );
 CREATE INDEX IF NOT EXISTS idx_activity_groups_group_id ON activity_groups(group_id);
+
+-- Posizione unica del campo (1:1 col progetto): usata anche come centro per la
+-- ricerca dei punti di interesse vicini (ospedali, farmacie, vigili del fuoco).
+CREATE TABLE IF NOT EXISTS project_locations (
+    project_id    INTEGER PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,
+    lat           REAL NOT NULL,
+    lon           REAL NOT NULL,
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_pois (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    kind          TEXT NOT NULL CHECK (kind IN ('hospital','pharmacy','fire_station','other')),
+    name          TEXT NOT NULL,
+    phone         TEXT NOT NULL DEFAULT '',
+    address       TEXT NOT NULL DEFAULT '',
+    lat           REAL,
+    lon           REAL,
+    notes         TEXT NOT NULL DEFAULT '',
+    hours         TEXT NOT NULL DEFAULT '',
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_project_pois_project_id ON project_pois(project_id);
+
+-- Pagine libere di progetto (non legate a un giorno): stesso editor a blocchi
+-- delle attività, "content" è JSON ActivityDoc come activities.description.
+CREATE TABLE IF NOT EXISTS project_pages (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    title         TEXT NOT NULL,
+    content       TEXT NOT NULL DEFAULT '',
+    position      INTEGER NOT NULL DEFAULT 0,
+    created_by    TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_project_pages_project_id ON project_pages(project_id);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.
 MIGRATIONS = [
     "ALTER TABLE project_tokens ADD COLUMN email TEXT",
     "ALTER TABLE activities ADD COLUMN materials TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE project_pois ADD COLUMN hours TEXT NOT NULL DEFAULT ''",
 ]
 
 
