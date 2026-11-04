@@ -1,4 +1,13 @@
+import { haversineMeters } from './geo'
+
 export interface GpxPoint {
+  lat: number
+  lon: number
+  ele: number | null
+}
+
+export interface GpxTrackPoint {
+  km: number
   lat: number
   lon: number
   ele: number | null
@@ -11,27 +20,11 @@ export interface GpxStats {
   maxAltitudeM: number | null
   minAltitudeM: number | null
   profile: { km: number; ele: number }[]
+  // Ogni punto del tracciato con la distanza cumulata: usato per posizionare
+  // il marcatore sulla mappa in corrispondenza dello slider del grafico quota.
+  track: GpxTrackPoint[]
   points: GpxPoint[]
   segments: GpxPoint[][]
-}
-
-function haversineMeters(a: GpxPoint, b: GpxPoint): number {
-  const R = 6371000
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(b.lat - a.lat)
-  const dLon = toRad(b.lon - a.lon)
-  const lat1 = toRad(a.lat)
-  const lat2 = toRad(b.lat)
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(h))
-}
-
-export function downsample<T>(arr: T[], maxPoints: number): T[] {
-  if (arr.length <= maxPoints) return arr
-  const step = arr.length / maxPoints
-  const out: T[] = []
-  for (let i = 0; i < maxPoints; i++) out.push(arr[Math.floor(i * step)])
-  return out
 }
 
 function parsePoint(el: Element): GpxPoint {
@@ -66,6 +59,7 @@ export function parseGpx(xmlText: string): GpxStats {
   let elevationGainM = 0
   let elevationLossM = 0
   const profile: { km: number; ele: number }[] = []
+  const track: GpxTrackPoint[] = []
   const points: GpxPoint[] = []
 
   for (const segment of segments) {
@@ -82,6 +76,7 @@ export function parseGpx(xmlText: string): GpxStats {
           else elevationLossM += -delta
         }
       }
+      track.push({ km: cumKm, lat: point.lat, lon: point.lon, ele: point.ele })
       if (point.ele !== null) profile.push({ km: cumKm, ele: point.ele })
     }
   }
@@ -100,7 +95,8 @@ export function parseGpx(xmlText: string): GpxStats {
     elevationLossM,
     maxAltitudeM,
     minAltitudeM,
-    profile: downsample(profile, 200),
+    profile,
+    track,
     points,
     segments,
   }

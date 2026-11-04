@@ -4,6 +4,7 @@ import { useMemberAuthStore } from '../state/memberAuthStore'
 import { AccountMenu } from './AccountMenu'
 import { BrandIcon } from './icons/BrandIcon'
 import { ThemeToggle } from './ThemeToggle'
+import { ViewModeToggle } from './ViewModeToggle'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const ownerEmail = useAuthStore((s) => s.email)
@@ -19,6 +20,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           ScoutPlanner
         </Link>
         <div className="app-header-actions">
+          <ViewModeToggle />
           <ThemeToggle />
           {ownerEmail && (
             <AccountMenu
