@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { memberLogin } from '../api/auth'
+import { GoogleLoginButton } from '../components/GoogleLoginButton'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 
 export function MemberLogin() {
@@ -55,6 +56,7 @@ export function MemberLogin() {
           </p>
         )}
       </form>
+      <GoogleLoginButton />
       <p className="muted" style={{ marginTop: 16 }}>
         Sei un capo squadriglia? <Link to="/">Accedi con il magic link</Link>
       </p>

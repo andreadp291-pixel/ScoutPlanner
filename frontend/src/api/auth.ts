@@ -43,3 +43,13 @@ export function ownerSetPassword(newPassword: string) {
     body: { new_password: newPassword },
   })
 }
+
+export interface GoogleSession {
+  owner: OwnerSession
+  member: MemberSession | null
+  owner_projects: number
+}
+
+export function googleLogin(credential: string) {
+  return apiFetch<GoogleSession>('/auth/google', { method: 'POST', body: { credential } })
+}

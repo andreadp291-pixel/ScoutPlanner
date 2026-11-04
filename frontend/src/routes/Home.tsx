@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestLink } from '../api/auth'
+import { GoogleLoginButton } from '../components/GoogleLoginButton'
 
 export function Home() {
   const [email, setEmail] = useState('')
@@ -53,6 +54,7 @@ export function Home() {
           </p>
         )}
       </form>
+      <GoogleLoginButton />
       <p className="muted" style={{ marginTop: 16 }}>
         Hai già impostato una password? <Link to="/login/owner">Accedi con email e password</Link>
       </p>

@@ -3,11 +3,13 @@ import time
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from ..config import FRONTEND_BASE_URL, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, MAGIC_LINK_MAX_AGE
+from ..config import FRONTEND_BASE_URL, GOOGLE_CLIENT_ID, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_SECONDS, MAGIC_LINK_MAX_AGE
 from ..db import get_conn
 from ..deps import require_member_session, require_owner_session
 from ..mail import send_magic_link_email
 from ..schemas import (
+    GoogleLoginIn,
+    GoogleSessionOut,
     MemberChangePasswordIn,
     MemberLoginIn,
     MemberSessionOut,
@@ -21,6 +23,7 @@ from ..security import (
     create_member_session_token,
     create_owner_session_token,
     ph,
+    verify_google_credential,
     verify_magic_link_token,
 )
 
@@ -160,3 +163,40 @@ def owner_login(body: OwnerLoginIn, request: Request):
 
     session_token = create_owner_session_token(body.email, row["token_version"])
     return {"session_token": session_token, "email": body.email}
+
+
+@router.post("/google", response_model=GoogleSessionOut)
+def google_login(body: GoogleLoginIn):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Login con Google non configurato")
+    info = verify_google_credential(body.credential, GOOGLE_CLIENT_ID)
+    if info is None:
+        raise HTTPException(status_code=401, detail="Accesso con Google non valido")
+    email = info["email"]
+
+    with get_conn() as conn:
+        # Come per il magic link: un'email verificata diventa owner al primo accesso.
+        conn.execute("INSERT OR IGNORE INTO owners (email) VALUES (?)", (email,))
+        owner = conn.execute("SELECT token_version FROM owners WHERE email = ?", (email,)).fetchone()
+        owner_projects = conn.execute(
+            "SELECT COUNT(*) AS n FROM projects WHERE owner_email = ?", (email,)
+        ).fetchone()["n"]
+        member = conn.execute(
+            "SELECT id, display_name, token_version FROM members WHERE email = ?", (email,)
+        ).fetchone()
+        if member is not None:
+            # Google ha già provato che l'email è sua: la password provvisoria non serve più.
+            conn.execute("UPDATE members SET must_change_password = 0 WHERE id = ?", (member["id"],))
+
+    out = {
+        "owner": {"session_token": create_owner_session_token(email, owner["token_version"]), "email": email},
+        "member": None,
+        "owner_projects": owner_projects,
+    }
+    if member is not None:
+        out["member"] = {
+            "session_token": create_member_session_token(member["id"], member["token_version"]),
+            "display_name": member["display_name"],
+            "must_change_password": False,
+        }
+    return out

@@ -127,3 +127,43 @@ def test_assignees_and_materials(client, project):
     # chi ha il link è riconosciuto: access restituisce il suo ref
     me = client.get(f"/projects/{project}/access", headers={"Authorization": f"Bearer {link['raw_token']}"}).json()
     assert me["ref"] == refs["Silvia"]
+
+
+def test_google_login(client, project, monkeypatch):
+    monkeypatch.setattr(auth, "GOOGLE_CLIENT_ID", "cid")
+    h = owner()
+    client.post(f"/projects/{project}/members", json={"person_name": "Mia", "email": "mia@x.it", "role": "editor"}, headers=h)
+    fake = {"good": {"email": "mia@x.it", "name": "Mia"}, "new": {"email": "nuovo@x.it", "name": "N"}}
+    monkeypatch.setattr(auth, "verify_google_credential", lambda cred, cid: fake.get(cred))
+
+    r = client.post("/auth/google", json={"credential": "good"}).json()
+    assert r["member"]["must_change_password"] is False and r["owner_projects"] == 0
+    # la sessione membro ottenuta con Google apre il progetto, anche se la password provvisoria non era stata cambiata
+    tok = r["member"]["session_token"]
+    assert client.get(f"/projects/{project}/activities", headers={"Authorization": f"Bearer {tok}"}).status_code == 200
+
+    new = client.post("/auth/google", json={"credential": "new"}).json()
+    assert new["member"] is None and new["owner"]["email"] == "nuovo@x.it"
+    assert client.post("/auth/google", json={"credential": "falso"}).status_code == 401
+
+
+def test_google_login_disabled_without_client_id(client, monkeypatch):
+    monkeypatch.setattr(auth, "GOOGLE_CLIENT_ID", "")
+    assert client.post("/auth/google", json={"credential": "x"}).status_code == 503
+
+
+def test_verify_google_credential_checks_audience(monkeypatch):
+    import io
+    import json as _json
+
+    from app import security
+
+    def fake_urlopen(url, timeout):
+        return io.StringIO(_json.dumps(payload))
+
+    monkeypatch.setattr(security.urllib.request, "urlopen", fake_urlopen)
+    payload = {"aud": "cid", "iss": "accounts.google.com", "email": "A@X.it", "email_verified": "true", "name": "A"}
+    assert security.verify_google_credential("t", "cid") == {"email": "a@x.it", "name": "A"}
+    assert security.verify_google_credential("t", "altro-client") is None  # token emesso per un'altra app
+    payload["email_verified"] = "false"
+    assert security.verify_google_credential("t", "cid") is None

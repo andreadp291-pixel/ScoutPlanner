@@ -24,6 +24,10 @@ class RequestLinkIn(BaseModel):
     email: Email
 
 
+class GoogleLoginIn(BaseModel):
+    credential: str = Field(min_length=1)
+
+
 class OwnerSessionOut(BaseModel):
     session_token: str
     email: str
@@ -299,3 +303,9 @@ class MaterialAssignIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     procure_ref: str | None = None
     transport_ref: str | None = None
+
+
+class GoogleSessionOut(BaseModel):
+    owner: OwnerSessionOut
+    member: MemberSessionOut | None = None  # presente se l'email è di un membro invitato
+    owner_projects: int  # quanti progetti ha come owner: serve a scegliere la pagina d'arrivo
