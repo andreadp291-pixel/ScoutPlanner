@@ -15,6 +15,7 @@ import { ProjectCreate } from './routes/ProjectCreate'
 import { ProjectFullCalendarView } from './routes/ProjectFullCalendarView'
 import { ProjectHome } from './routes/ProjectHome'
 import { ProjectInfo } from './routes/ProjectInfo'
+import { ProjectMaterials } from './routes/ProjectMaterials'
 import { ProjectList } from './routes/ProjectList'
 import { ProjectPageEditor } from './routes/ProjectPageEditor'
 import { ProjectTokens } from './routes/ProjectTokens'
@@ -114,6 +115,7 @@ function App() {
                 element={<ActivityDescription />}
               />
               <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
+              <Route path="/projects/:projectId/materials" element={<ProjectMaterials />} />
               <Route path="/projects/:projectId/pages/:pageId" element={<ProjectPageEditor />} />
               <Route
                 path="/projects/:projectId/tokens"

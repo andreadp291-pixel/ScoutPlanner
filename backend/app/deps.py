@@ -14,6 +14,7 @@ class Actor:
     role: str          # 'owner' | 'editor' | 'viewer'
     name: str           # nome persona, o email per l'owner
     project_id: int
+    ref: str            # per le assegnazioni: 'o' | 'm<id>' | 't<id>'
 
 
 def get_bearer_token(request: Request) -> str:
@@ -74,7 +75,7 @@ def require_project_role(min_role: str):
                     raise HTTPException(status_code=401, detail="Sessione non più valida, effettua di nuovo il login")
                 if owner_data["email"] != project["owner_email"]:
                     raise HTTPException(status_code=403, detail="Non sei l'owner di questo progetto")
-                actor = Actor(role="owner", name=owner_data["email"], project_id=project_id)
+                actor = Actor(role="owner", name=owner_data["email"], project_id=project_id, ref="o")
             else:
                 member_data = verify_member_session_token(token, max_age=MEMBER_SESSION_MAX_AGE)
                 if member_data is not None:
@@ -92,7 +93,7 @@ def require_project_role(min_role: str):
                     ).fetchone()
                     if pm is None:
                         raise HTTPException(status_code=403, detail="Non hai accesso a questo progetto")
-                    actor = Actor(role=pm["role"], name=member_row["display_name"], project_id=project_id)
+                    actor = Actor(role=pm["role"], name=member_row["display_name"], project_id=project_id, ref=f"m{member_row['id']}")
                 else:
                     token_hash = hash_share_token(token)
                     row = conn.execute(
@@ -106,7 +107,7 @@ def require_project_role(min_role: str):
                         "UPDATE project_tokens SET last_used_at = datetime('now') WHERE id = ?",
                         (row["id"],),
                     )
-                    actor = Actor(role=row["role"], name=row["person_name"], project_id=project_id)
+                    actor = Actor(role=row["role"], name=row["person_name"], project_id=project_id, ref=f"t{row['id']}")
 
         if ROLE_RANK[actor.role] < ROLE_RANK[min_role]:
             raise HTTPException(status_code=403, detail="Permessi insufficienti")

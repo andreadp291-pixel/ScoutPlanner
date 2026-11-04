@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { Activity } from '../api/activities'
 import { listActivities } from '../api/activities'
+import { listPeople } from '../api/people'
 import { getProject } from '../api/projects'
 import { ActivityQuickViewModal } from '../components/ActivityQuickViewModal'
 import { ReadOnlyCalendar } from '../components/calendar/ReadOnlyCalendar'
@@ -19,6 +20,12 @@ export function ProjectFullCalendarView() {
   const activitiesQuery = useQuery({
     queryKey: ['activities', id],
     queryFn: () => listActivities(id),
+    enabled: !!projectQuery.data,
+  })
+
+  const peopleQuery = useQuery({
+    queryKey: ['people', id],
+    queryFn: () => listPeople(id),
     enabled: !!projectQuery.data,
   })
 
@@ -50,6 +57,7 @@ export function ProjectFullCalendarView() {
         <ActivityQuickViewModal
           projectId={id}
           activity={quickViewActivity}
+          people={peopleQuery.data ?? []}
           onClose={() => setQuickViewActivity(null)}
         />
       )}

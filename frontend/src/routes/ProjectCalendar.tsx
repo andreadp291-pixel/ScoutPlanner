@@ -12,6 +12,7 @@ import {
 } from '../api/activities'
 import { getProject, getProjectAccess } from '../api/projects'
 import { createGroup, deleteGroup, listGroups, renameGroup } from '../api/groups'
+import { listPeople } from '../api/people'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { GroupsManagerModal } from '../components/GroupsManagerModal'
 import { DayColumn } from '../components/calendar/DayColumn'
@@ -19,6 +20,7 @@ import { TimeAxis } from '../components/calendar/TimeAxis'
 import { dateRange, formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
 import { DownloadIcon } from '../components/icons/DownloadIcon'
 import { InfoIcon } from '../components/icons/InfoIcon'
+import { ListIcon } from '../components/icons/ListIcon'
 import { ShareIcon } from '../components/icons/ShareIcon'
 import { UploadIcon } from '../components/icons/UploadIcon'
 import { UsersIcon } from '../components/icons/UsersIcon'
@@ -61,6 +63,12 @@ export function ProjectCalendar() {
   const groupsQuery = useQuery({
     queryKey: ['groups', id],
     queryFn: () => listGroups(id),
+    enabled: !!projectQuery.data,
+  })
+
+  const peopleQuery = useQuery({
+    queryKey: ['people', id],
+    queryFn: () => listPeople(id),
     enabled: !!projectQuery.data,
   })
 
@@ -223,6 +231,12 @@ export function ProjectCalendar() {
               Info generali
             </button>
           </Link>
+          <Link to={`/projects/${id}/materials`}>
+            <button type="button">
+              <ListIcon />
+              Materiali
+            </button>
+          </Link>
           <button type="button" onClick={handleExport}>
             <DownloadIcon />
             Esporta
@@ -328,6 +342,7 @@ export function ProjectCalendar() {
           projectEndDate={project.end_date}
           canDelete={canEdit}
           groups={groupsQuery.data ?? []}
+          people={peopleQuery.data ?? []}
           onSave={(input) => {
             if (editorState.mode === 'create') {
               createMutation.mutate(input)
@@ -353,6 +368,7 @@ export function ProjectCalendar() {
                       color: a.color,
                       materials: a.materials,
                       group_ids: a.group_ids,
+                      assignees: a.assignees,
                       start_at: startAt,
                       end_at: endAt,
                     })),

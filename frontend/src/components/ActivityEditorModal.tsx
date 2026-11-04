@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Activity, ActivityInput } from '../api/activities'
 import type { Group } from '../api/groups'
+import type { Person } from '../api/people'
 import { FileTextIcon } from './icons/FileTextIcon'
 import { dateRange, formatChipLabel } from './calendar/time'
 
@@ -22,6 +23,7 @@ interface ActivityEditorModalProps {
   projectEndDate: string
   canDelete: boolean
   groups: Group[]
+  people: Person[]
   onSave: (input: ActivityInput) => void
   onDelete?: () => void
   onDuplicate?: (entries: DuplicateEntry[]) => void
@@ -37,6 +39,7 @@ export function ActivityEditorModal({
   projectEndDate,
   canDelete,
   groups,
+  people,
   onSave,
   onDelete,
   onDuplicate,
@@ -47,6 +50,7 @@ export function ActivityEditorModal({
   const [startTime, setStartTime] = useState((initial?.start_at ?? defaultStartAt ?? '').slice(11, 16))
   const [endTime, setEndTime] = useState((initial?.end_at ?? defaultEndAt ?? '').slice(11, 16))
   const [groupIds, setGroupIds] = useState<Set<number>>(() => new Set(initial?.group_ids ?? []))
+  const [assignees, setAssignees] = useState<Set<string>>(() => new Set(initial?.assignees ?? []))
 
   const datePart = (initial?.start_at ?? defaultStartAt ?? '').slice(0, 10)
 
@@ -76,6 +80,15 @@ export function ActivityEditorModal({
     onDelete()
   }
 
+  function toggleAssignee(ref: string) {
+    setAssignees((prev) => {
+      const next = new Set(prev)
+      if (next.has(ref)) next.delete(ref)
+      else next.add(ref)
+      return next
+    })
+  }
+
   function toggleGroup(id: number) {
     setGroupIds((prev) => {
       const next = new Set(prev)
@@ -94,6 +107,7 @@ export function ActivityEditorModal({
       category: 'attivita',
       color,
       group_ids: [...groupIds],
+      assignees: [...assignees],
       start_at: `${datePart}T${startTime}`,
       end_at: `${datePart}T${endTime}`,
     })
@@ -164,6 +178,20 @@ export function ActivityEditorModal({
                       onChange={() => toggleGroup(g.id)}
                     />
                     {g.name}
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+
+          {!showDuplicate && people.length > 0 && (
+            <>
+              <label>Responsabili</label>
+              <div className="group-checkbox-list">
+                {people.map((p) => (
+                  <label key={p.ref} className="group-checkbox-item">
+                    <input type="checkbox" checked={assignees.has(p.ref)} onChange={() => toggleAssignee(p.ref)} />
+                    {p.name}
                   </label>
                 ))}
               </div>

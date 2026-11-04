@@ -43,7 +43,7 @@ def get_project(actor: Actor = Depends(require_project_role("viewer"))):
 
 @router.get("/{project_id}/access")
 def get_access(actor: Actor = Depends(require_project_role("viewer"))):
-    return {"role": actor.role, "name": actor.name}
+    return {"role": actor.role, "name": actor.name, "ref": actor.ref}
 
 
 @router.patch("/{project_id}", response_model=ProjectOut)

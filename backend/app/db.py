@@ -89,6 +89,24 @@ CREATE TABLE IF NOT EXISTS activity_groups (
 );
 CREATE INDEX IF NOT EXISTS idx_activity_groups_group_id ON activity_groups(group_id);
 
+-- Responsabili delle attività. person_ref: 'o' = owner, 'm<id>' = membro con account,
+-- 't<id>' = persona con link (vedi routers/people.py).
+CREATE TABLE IF NOT EXISTS activity_assignees (
+    activity_id   INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    person_ref    TEXT NOT NULL,
+    PRIMARY KEY (activity_id, person_ref)
+);
+
+-- Chi procura / chi trasporta un materiale. La lista dei materiali è ricavata dal testo
+-- delle attività; name_key è il nome in minuscolo.
+CREATE TABLE IF NOT EXISTS material_assignments (
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name_key      TEXT NOT NULL,
+    procure_ref   TEXT,
+    transport_ref TEXT,
+    PRIMARY KEY (project_id, name_key)
+);
+
 -- Posizione unica del campo (1:1 col progetto): usata anche come centro per la
 -- ricerca dei punti di interesse vicini (ospedali, farmacie, vigili del fuoco).
 CREATE TABLE IF NOT EXISTS project_locations (

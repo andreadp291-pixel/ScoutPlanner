@@ -69,6 +69,7 @@ class ActivityCreateIn(BaseModel):
     start_at: IsoDateTime
     end_at: IsoDateTime
     group_ids: list[int] = []
+    assignees: list[str] = []
 
 
 class ActivityUpdateIn(BaseModel):
@@ -81,11 +82,12 @@ class ActivityUpdateIn(BaseModel):
     start_at: IsoDateTime | None = None
     end_at: IsoDateTime | None = None
     group_ids: list[int] | None = None
+    assignees: list[str] | None = None
 
     @model_validator(mode="after")
     def no_explicit_null(self):
         # Le colonne sono NOT NULL: un "null" esplicito darebbe un errore 500 sul database.
-        for name in self.model_fields_set - {"group_ids"}:
+        for name in self.model_fields_set - {"group_ids", "assignees"}:
             if getattr(self, name) is None:
                 raise ValueError(f"{name} non può essere null")
         return self
@@ -128,6 +130,7 @@ class ActivityOut(BaseModel):
     created_at: str
     updated_at: str
     group_ids: list[int] = []
+    assignees: list[str] = []
 
 
 class TokenCreateIn(BaseModel):
@@ -271,3 +274,28 @@ class PageOut(BaseModel):
     created_by: str
     created_at: str
     updated_at: str
+
+
+class PersonOut(BaseModel):
+    ref: str
+    name: str
+    kind: str  # 'owner' | 'member' | 'link'
+
+
+class MaterialActivityOut(BaseModel):
+    id: int
+    title: str
+
+
+class MaterialOut(BaseModel):
+    key: str
+    name: str
+    activities: list[MaterialActivityOut]
+    procure_ref: str | None = None
+    transport_ref: str | None = None
+
+
+class MaterialAssignIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    procure_ref: str | None = None
+    transport_ref: str | None = None

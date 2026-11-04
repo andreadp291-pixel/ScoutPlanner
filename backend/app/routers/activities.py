@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
 from ..deps import Actor, require_project_role
+from .people import project_people
 from ..schemas import ActivityCreateIn, ActivityOut, ActivitySwapIn, ActivityUpdateIn
 
 router = APIRouter(prefix="/projects/{project_id}/activities", tags=["activities"])
@@ -50,9 +51,23 @@ def _set_activity_groups(conn, project_id: int, activity_id: int, group_ids: lis
             )
 
 
+def _set_activity_assignees(conn, project_id: int, activity_id: int, refs: list[str]) -> None:
+    conn.execute("DELETE FROM activity_assignees WHERE activity_id = ?", (activity_id,))
+    valid = {p["ref"] for p in project_people(conn, project_id)}
+    for ref in dict.fromkeys(refs):  # senza doppioni
+        if ref in valid:
+            conn.execute("INSERT INTO activity_assignees (activity_id, person_ref) VALUES (?, ?)", (activity_id, ref))
+
+
 def _activity_out(conn, row) -> dict:
     data = dict(row)
     data["group_ids"] = _group_ids_for(conn, row["id"])
+    data["assignees"] = [
+        r["person_ref"]
+        for r in conn.execute(
+            "SELECT person_ref FROM activity_assignees WHERE activity_id = ? ORDER BY person_ref", (row["id"],)
+        )
+    ]
     return data
 
 
@@ -92,6 +107,7 @@ def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require_proje
         )
         activity_id = cur.lastrowid
         _set_activity_groups(conn, actor.project_id, activity_id, body.group_ids)
+        _set_activity_assignees(conn, actor.project_id, activity_id, body.assignees)
         row = conn.execute("SELECT * FROM activities WHERE id = ?", (activity_id,)).fetchone()
         return _activity_out(conn, row)
 
@@ -130,6 +146,7 @@ def update_activity(
 ):
     fields = body.model_dump(exclude_unset=True)
     group_ids = fields.pop("group_ids", None)
+    assignees = fields.pop("assignees", None)
     with get_conn() as conn:
         current = conn.execute(
             "SELECT * FROM activities WHERE id = ? AND project_id = ?", (activity_id, actor.project_id)
@@ -150,6 +167,8 @@ def update_activity(
             )
         if group_ids is not None:
             _set_activity_groups(conn, actor.project_id, activity_id, group_ids)
+        if assignees is not None:
+            _set_activity_assignees(conn, actor.project_id, activity_id, assignees)
         row = conn.execute(
             "SELECT * FROM activities WHERE id = ? AND project_id = ?", (activity_id, actor.project_id)
         ).fetchone()

@@ -15,6 +15,7 @@ export interface Activity {
   created_at: string
   updated_at: string
   group_ids: number[]
+  assignees: string[]
 }
 
 export interface ActivityInput {
@@ -27,6 +28,7 @@ export interface ActivityInput {
   start_at: string
   end_at: string
   group_ids?: number[]
+  assignees?: string[]
 }
 
 export function listActivities(projectId: number) {

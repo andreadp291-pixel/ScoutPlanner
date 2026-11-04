@@ -11,8 +11,10 @@ from .routers import (
     activities,
     auth,
     groups,
+    materials,
     me,
     members,
+    people,
     project_location,
     project_pages,
     project_pois,
@@ -47,6 +49,8 @@ app.include_router(uploads.router)
 app.include_router(tokens.router)
 app.include_router(members.router)
 app.include_router(me.router)
+app.include_router(people.router)
+app.include_router(materials.router)
 app.include_router(project_location.router)
 app.include_router(project_pois.router)
 app.include_router(project_pages.router)

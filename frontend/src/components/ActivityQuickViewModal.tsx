@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom'
 import type { Activity } from '../api/activities'
+import type { Person } from '../api/people'
 import { formatDayLabel, minutesSinceMidnight, minutesToHHMM } from './calendar/time'
 import { LocationIcon } from './icons/LocationIcon'
 
 interface ActivityQuickViewModalProps {
   projectId: number
   activity: Activity
+  people: Person[]
   onClose: () => void
 }
 
-export function ActivityQuickViewModal({ projectId, activity, onClose }: ActivityQuickViewModalProps) {
+export function ActivityQuickViewModal({ projectId, activity, people, onClose }: ActivityQuickViewModalProps) {
   const navigate = useNavigate()
 
   const start = minutesToHHMM(minutesSinceMidnight(activity.start_at))
@@ -28,6 +30,12 @@ export function ActivityQuickViewModal({ projectId, activity, onClose }: Activit
         {activity.location && (
           <p>
             <LocationIcon size={15} /> {activity.location}
+          </p>
+        )}
+        {activity.assignees.length > 0 && (
+          <p>
+            <strong>Responsabili:</strong>{' '}
+            {activity.assignees.map((r) => people.find((p) => p.ref === r)?.name ?? '(rimosso)').join(', ')}
           </p>
         )}
         <div className="modal-actions">

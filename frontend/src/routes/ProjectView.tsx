@@ -4,7 +4,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import type { Activity } from '../api/activities'
 import { listActivities } from '../api/activities'
 import { listPages } from '../api/pages'
-import { getProject } from '../api/projects'
+import { listPeople } from '../api/people'
+import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityQuickViewModal } from '../components/ActivityQuickViewModal'
 import { dateRange, formatDayLabel, minutesSinceMidnight, minutesToHHMM, nowMinutes, todayDateString } from '../components/calendar/time'
 import { ReadOnlyCalendar } from '../components/calendar/ReadOnlyCalendar'
@@ -14,6 +15,7 @@ import { CalendarIcon } from '../components/icons/CalendarIcon'
 import { ChevronDownIcon } from '../components/icons/ChevronDownIcon'
 import { ChevronUpIcon } from '../components/icons/ChevronUpIcon'
 import { InfoIcon } from '../components/icons/InfoIcon'
+import { ListIcon } from '../components/icons/ListIcon'
 import { Spinner } from '../components/Spinner'
 import { useProjectAccessStore } from '../state/projectAccessStore'
 
@@ -24,6 +26,7 @@ export function ProjectView() {
   const setToken = useProjectAccessStore((s) => s.setToken)
   const [dayExpanded, setDayExpanded] = useState(false)
   const [quickViewActivity, setQuickViewActivity] = useState<Activity | null>(null)
+  const [onlyMine, setOnlyMine] = useState(false)
 
   useEffect(() => {
     const shareToken = searchParams.get('t')
@@ -40,6 +43,12 @@ export function ProjectView() {
     queryFn: () => listActivities(id),
     enabled: !!projectQuery.data,
   })
+  const accessQuery = useQuery({ queryKey: ['access', id], queryFn: () => getProjectAccess(id) })
+  const peopleQuery = useQuery({
+    queryKey: ['people', id],
+    queryFn: () => listPeople(id),
+    enabled: !!projectQuery.data,
+  })
   const pagesQuery = useQuery({
     queryKey: ['pages', id],
     queryFn: () => listPages(id),
@@ -50,7 +59,10 @@ export function ProjectView() {
   if (projectQuery.error || !projectQuery.data) return <p role="alert">Progetto non trovato o accesso negato</p>
 
   const project = projectQuery.data
-  const activities = activitiesQuery.data ?? []
+  const myRef = accessQuery.data?.ref
+  const activities = (activitiesQuery.data ?? []).filter(
+    (a) => !onlyMine || (myRef !== undefined && a.assignees.includes(myRef)),
+  )
   const today = todayDateString()
   const isCampToday = dateRange(project.start_date, project.end_date).includes(today)
 
@@ -92,8 +104,18 @@ export function ProjectView() {
               <InfoIcon /> Info generali
             </button>
           </Link>
+          <Link to={`/projects/${id}/materials`}>
+            <button type="button">
+              <ListIcon /> Materiali
+            </button>
+          </Link>
         </div>
       </div>
+
+      <label className="group-checkbox-item" style={{ marginBottom: 12 }}>
+        <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
+        Solo le mie attività
+      </label>
 
       {isCampToday ? (
         <>
@@ -183,6 +205,7 @@ export function ProjectView() {
         <ActivityQuickViewModal
           projectId={id}
           activity={quickViewActivity}
+          people={peopleQuery.data ?? []}
           onClose={() => setQuickViewActivity(null)}
         />
       )}

@@ -24,6 +24,7 @@ export function getProject(projectId: number) {
 export interface ProjectAccess {
   role: 'owner' | 'editor' | 'viewer'
   name: string
+  ref: string
 }
 
 export function getProjectAccess(projectId: number) {

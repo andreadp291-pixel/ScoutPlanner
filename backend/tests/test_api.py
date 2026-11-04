@@ -101,3 +101,29 @@ def test_poi_and_page_routers(client, project):
     page = client.post(f"/projects/{project}/pages", json={"title": "T"}, headers=h)
     assert page.status_code == 201
     assert client.get(f"/projects/{project}/pages", headers=h).status_code == 200
+
+
+def test_assignees_and_materials(client, project):
+    h, url = owner(), f"/projects/{project}/activities"
+    link = client.post(f"/projects/{project}/tokens", json={"person_name": "Silvia", "role": "editor"}, headers=h).json()
+    people = client.get(f"/projects/{project}/people", headers=h).json()
+    refs = {p["name"]: p["ref"] for p in people}
+    assert refs["Silvia"] == f"t{link['id']}" and refs["o@x.it"] == "o"
+
+    a = client.post(url, json={**ACT, "assignees": [refs["Silvia"], "t999", refs["Silvia"]], "materials": "Corda, torcia\ncorda"}, headers=h).json()
+    assert a["assignees"] == [refs["Silvia"]]  # persone sconosciute e doppioni scartati
+    b = client.post(url, json={**ACT, "start_at": "2026-07-01T11:00", "end_at": "2026-07-01T12:00", "materials": "Torcia"}, headers=h).json()
+    assert client.patch(f"{url}/{b['id']}", json={"assignees": []}, headers=h).json()["assignees"] == []
+
+    mats = client.get(f"/projects/{project}/materials", headers=h).json()
+    assert [m["key"] for m in mats] == ["corda", "torcia"]
+    assert len(mats[1]["activities"]) == 2
+
+    r = client.put(f"/projects/{project}/materials", json={"name": "Corda", "procure_ref": refs["Silvia"], "transport_ref": "o"}, headers=h)
+    assert r.status_code == 200
+    assert client.get(f"/projects/{project}/materials", headers=h).json()[0]["procure_ref"] == refs["Silvia"]
+    assert client.put(f"/projects/{project}/materials", json={"name": "Corda", "procure_ref": "m999"}, headers=h).status_code == 400
+
+    # chi ha il link è riconosciuto: access restituisce il suo ref
+    me = client.get(f"/projects/{project}/access", headers={"Authorization": f"Bearer {link['raw_token']}"}).json()
+    assert me["ref"] == refs["Silvia"]
