@@ -1,4 +1,5 @@
 name: Deploy frontend to GitHub Pages
+# Build e pubblicazione automatici a ogni push su main che tocca frontend/
 
 on:
   push:
