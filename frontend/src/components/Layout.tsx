@@ -50,10 +50,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const accountItems = ownerEmail
     ? [
         { to: '/projects', label: 'I miei progetti' },
+        { to: '/account/email', label: 'Notifiche email' },
         { to: '/owner/set-password', label: 'Imposta password' },
       ]
     : [
         { to: '/me/projects', label: 'I miei progetti' },
+        { to: '/account/email', label: 'Notifiche email' },
         { to: '/member/change-password', label: 'Cambia password' },
       ]
   const accountLabel = ownerEmail ?? memberName

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
-from ..deps import require_member_session
-from ..schemas import MemberProjectOut
+from ..deps import get_bearer_token, require_member_session
+from ..schemas import EmailPrefsIO, MemberProjectOut
+from .access import _identity
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -20,3 +21,30 @@ def my_projects(member: dict = Depends(require_member_session)):
             (member["id"],),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def _my_email(conn, token: str) -> str:
+    who = _identity(conn, token)
+    if who is None:
+        raise HTTPException(401, "Accedi con il tuo account")
+    return who[0]
+
+
+@router.get("/email-prefs", response_model=EmailPrefsIO)
+def get_email_prefs(token: str = Depends(get_bearer_token)):
+    with get_conn() as conn:
+        email = _my_email(conn, token)
+        row = conn.execute("SELECT notifications, report FROM email_prefs WHERE email = ?", (email,)).fetchone()
+    return {"notifications": bool(row["notifications"]) if row else True, "report": bool(row["report"]) if row else True}
+
+
+@router.put("/email-prefs", response_model=EmailPrefsIO)
+def set_email_prefs(body: EmailPrefsIO, token: str = Depends(get_bearer_token)):
+    with get_conn() as conn:
+        email = _my_email(conn, token)
+        conn.execute(
+            """INSERT INTO email_prefs (email, notifications, report) VALUES (?, ?, ?)
+               ON CONFLICT(email) DO UPDATE SET notifications = excluded.notifications, report = excluded.report""",
+            (email, body.notifications, body.report),
+        )
+    return body

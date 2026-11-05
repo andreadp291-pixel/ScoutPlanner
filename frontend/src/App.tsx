@@ -15,6 +15,7 @@ import { OwnerSetPassword } from './routes/OwnerSetPassword'
 import { ProjectCreate } from './routes/ProjectCreate'
 import { ProjectFullCalendarView } from './routes/ProjectFullCalendarView'
 import { ProjectHome } from './routes/ProjectHome'
+import { EmailPrefs } from './routes/EmailPrefs'
 import { ProjectHistory } from './routes/ProjectHistory'
 import { ProjectInfo } from './routes/ProjectInfo'
 import { ProjectMaterials } from './routes/ProjectMaterials'
@@ -88,6 +89,7 @@ function App() {
                   </RequireMemberSession>
                 }
               />
+              <Route path="/account/email" element={<EmailPrefs />} />
               <Route
                 path="/owner/set-password"
                 element={

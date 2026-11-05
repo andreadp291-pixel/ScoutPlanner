@@ -95,6 +95,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_groups_group_id ON activity_groups(group
 CREATE TABLE IF NOT EXISTS activity_assignees (
     activity_id   INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
     person_ref    TEXT NOT NULL,
+    done_at       TEXT,  -- quando quella persona ha segnato la sua parte come fatta
     PRIMARY KEY (activity_id, person_ref)
 );
 
@@ -188,6 +189,16 @@ CREATE TABLE IF NOT EXISTS access_requests (
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_access_requests_project ON access_requests(project_id, status);
+
+-- Preferenze email di chi ha un account (owner o membro): notifiche immediate e report giornaliero. Manca la riga = acceso.
+CREATE TABLE IF NOT EXISTS email_prefs (
+    email          TEXT PRIMARY KEY,
+    notifications  INTEGER NOT NULL DEFAULT 1,
+    report         INTEGER NOT NULL DEFAULT 1
+);
+
+-- Giorni per cui il report è già partito (uno al giorno).
+CREATE TABLE IF NOT EXISTS report_runs (day TEXT PRIMARY KEY);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.
@@ -196,6 +207,7 @@ MIGRATIONS = [
     "ALTER TABLE activities ADD COLUMN materials TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE project_pois ADD COLUMN hours TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE project_tokens ADD COLUMN expires_at TEXT",
+    "ALTER TABLE activity_assignees ADD COLUMN done_at TEXT",
     "ALTER TABLE activities ADD COLUMN deleted_at TEXT",  # cestino
     "ALTER TABLE project_pages ADD COLUMN deleted_at TEXT",
 ]

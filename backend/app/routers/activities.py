@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from ..db import get_conn
-from ..deps import Actor, require_project_role
+from ..deps import ROLE_RANK, Actor, require_project_role
+from ..notify import notify, project_url, ref_contacts, when_text
 from .history import FIELD_LABELS, log_change
 from .people import project_people
-from ..schemas import ActivityCreateIn, ActivityOut, ActivitySwapIn, ActivityUpdateIn
+from ..schemas import ActivityCreateIn, ActivityDoneIn, ActivityOut, ActivitySwapIn, ActivityUpdateIn
 
 router = APIRouter(prefix="/projects/{project_id}/activities", tags=["activities"])
 
@@ -52,23 +53,46 @@ def _set_activity_groups(conn, project_id: int, activity_id: int, group_ids: lis
             )
 
 
-def _set_activity_assignees(conn, project_id: int, activity_id: int, refs: list[str]) -> None:
+def _set_activity_assignees(conn, project_id: int, activity_id: int, refs: list[str]) -> list[str]:
+    """Imposta i responsabili tenendo il "fatto" di chi resta. Restituisce i ref aggiunti ora."""
+    before = {
+        r["person_ref"]: r["done_at"]
+        for r in conn.execute("SELECT person_ref, done_at FROM activity_assignees WHERE activity_id = ?", (activity_id,))
+    }
     conn.execute("DELETE FROM activity_assignees WHERE activity_id = ?", (activity_id,))
     valid = {p["ref"] for p in project_people(conn, project_id)}
+    added = []
     for ref in dict.fromkeys(refs):  # senza doppioni
         if ref in valid:
-            conn.execute("INSERT INTO activity_assignees (activity_id, person_ref) VALUES (?, ?)", (activity_id, ref))
+            conn.execute(
+                "INSERT INTO activity_assignees (activity_id, person_ref, done_at) VALUES (?, ?, ?)",
+                (activity_id, ref, before.get(ref)),
+            )
+            if ref not in before:
+                added.append(ref)
+    return added
+
+
+def _notify_assigned(conn, background, actor: Actor, row, refs: list[str]) -> None:
+    contacts = ref_contacts(conn, actor.project_id, [r for r in refs if r != actor.ref])
+    project = conn.execute("SELECT name FROM projects WHERE id = ?", (actor.project_id,)).fetchone()
+    notify(
+        background,
+        [email for email, _ in contacts.values()],
+        f"Ti hanno assegnato «{row['title']}» — {project['name']}",
+        f"{actor.name} ti ha assegnato l'attività «{row['title']}» ({when_text(row['start_at'], row['end_at'])})"
+        f" nel progetto «{project['name']}».\n\nApri l'attività: {project_url(actor.project_id, row['id'])}",
+    )
 
 
 def _activity_out(conn, row) -> dict:
     data = dict(row)
     data["group_ids"] = _group_ids_for(conn, row["id"])
-    data["assignees"] = [
-        r["person_ref"]
-        for r in conn.execute(
-            "SELECT person_ref FROM activity_assignees WHERE activity_id = ? ORDER BY person_ref", (row["id"],)
-        )
-    ]
+    rows = conn.execute(
+        "SELECT person_ref, done_at FROM activity_assignees WHERE activity_id = ? ORDER BY person_ref", (row["id"],)
+    ).fetchall()
+    data["assignees"] = [r["person_ref"] for r in rows]
+    data["done_refs"] = [r["person_ref"] for r in rows if r["done_at"]]
     return data
 
 
@@ -93,7 +117,9 @@ def get_activity(activity_id: int, actor: Actor = Depends(require_project_role("
 
 
 @router.post("", response_model=ActivityOut, status_code=201)
-def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require_project_role("editor"))):
+def create_activity(
+    body: ActivityCreateIn, background: BackgroundTasks, actor: Actor = Depends(require_project_role("editor"))
+):
     _check_times(body.start_at, body.end_at)
     with get_conn() as conn:
         _check_no_overlap(conn, actor.project_id, None, body.start_at, body.end_at)
@@ -108,8 +134,9 @@ def create_activity(body: ActivityCreateIn, actor: Actor = Depends(require_proje
         )
         activity_id = cur.lastrowid
         _set_activity_groups(conn, actor.project_id, activity_id, body.group_ids)
-        _set_activity_assignees(conn, actor.project_id, activity_id, body.assignees)
+        added = _set_activity_assignees(conn, actor.project_id, activity_id, body.assignees)
         row = conn.execute("SELECT * FROM activities WHERE id = ?", (activity_id,)).fetchone()
+        _notify_assigned(conn, background, actor, row, added)
         log_change(conn, actor, "activity", activity_id, "create", body.title)
         return _activity_out(conn, row)
 
@@ -146,7 +173,10 @@ def swap_activities(body: ActivitySwapIn, actor: Actor = Depends(require_project
 
 @router.patch("/{activity_id}", response_model=ActivityOut)
 def update_activity(
-    activity_id: int, body: ActivityUpdateIn, actor: Actor = Depends(require_project_role("editor"))
+    activity_id: int,
+    body: ActivityUpdateIn,
+    background: BackgroundTasks,
+    actor: Actor = Depends(require_project_role("editor")),
 ):
     fields = body.model_dump(exclude_unset=True)
     group_ids = fields.pop("group_ids", None)
@@ -180,11 +210,45 @@ def update_activity(
             )
         if group_ids is not None:
             _set_activity_groups(conn, actor.project_id, activity_id, group_ids)
-        if assignees is not None:
-            _set_activity_assignees(conn, actor.project_id, activity_id, assignees)
+        added = _set_activity_assignees(conn, actor.project_id, activity_id, assignees) if assignees is not None else []
         row = conn.execute(
             "SELECT * FROM activities WHERE id = ? AND project_id = ? AND deleted_at IS NULL", (activity_id, actor.project_id)
         ).fetchone()
+        _notify_assigned(conn, background, actor, row, added)
+        # chi era già responsabile viene avvisato se cambia qualcosa che lo riguarda (non per un semplice cambio di gruppi)
+        relevant = [FIELD_LABELS[k] for k in changed if k in ("title", "location", "start_at", "end_at", "description", "materials")]
+        if relevant:
+            stay = [r for r in before["assignees"] if r != actor.ref and r not in added]
+            contacts = ref_contacts(conn, actor.project_id, stay)
+            project = conn.execute("SELECT name FROM projects WHERE id = ?", (actor.project_id,)).fetchone()
+            notify(
+                background,
+                [email for email, _ in contacts.values()],
+                f"Attività modificata: «{row['title']}» — {project['name']}",
+                f"{actor.name} ha modificato l'attività «{row['title']}» ({', '.join(relevant)}).\n"
+                f"Ora è {when_text(row['start_at'], row['end_at'])}.\n\nApri l'attività: {project_url(actor.project_id, row['id'])}",
+            )
+        return _activity_out(conn, row)
+
+
+@router.patch("/{activity_id}/done", response_model=ActivityOut)
+def set_done(activity_id: int, body: ActivityDoneIn, actor: Actor = Depends(require_project_role("viewer"))):
+    """Segna come fatta (o da fare) la parte di una persona. Ognuno la sua; per quella degli altri serve essere editor."""
+    ref = body.person_ref or actor.ref
+    if ref != actor.ref and ROLE_RANK[actor.role] < ROLE_RANK["editor"]:
+        raise HTTPException(403, "Puoi segnare solo la tua parte")
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM activities WHERE id = ? AND project_id = ? AND deleted_at IS NULL", (activity_id, actor.project_id)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Attività non trovata")
+        cur = conn.execute(
+            "UPDATE activity_assignees SET done_at = CASE WHEN ? THEN datetime('now') END WHERE activity_id = ? AND person_ref = ?",
+            (body.done, activity_id, ref),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(409, "Questa persona non è tra i responsabili dell'attività")
         return _activity_out(conn, row)
 
 

@@ -26,9 +26,14 @@ interface RequestOptions {
   // Forza l'uso della sessione membro anche per chiamate non legate a un progetto
   // specifico (es. /me/projects).
   useMemberSession?: boolean
+  // Chiamate dell'account, non legate a un progetto: vale la sessione membro, altrimenti quella owner.
+  anySession?: boolean
 }
 
 function resolveToken(options: RequestOptions): string | null {
+  if (options.anySession) {
+    return useMemberAuthStore.getState().sessionToken ?? useAuthStore.getState().sessionToken
+  }
   if (options.useMemberSession) {
     return useMemberAuthStore.getState().sessionToken
   }

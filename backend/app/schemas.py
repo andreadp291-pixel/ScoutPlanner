@@ -135,6 +135,17 @@ class ActivityOut(BaseModel):
     updated_at: str
     group_ids: list[int] = []
     assignees: list[str] = []
+    done_refs: list[str] = []  # responsabili che hanno segnato la loro parte come fatta
+
+
+class ActivityDoneIn(BaseModel):
+    done: bool
+    person_ref: str | None = None  # di chi; se manca, di chi fa la richiesta
+
+
+class EmailPrefsIO(BaseModel):
+    notifications: bool
+    report: bool
 
 
 class TokenCreateIn(BaseModel):

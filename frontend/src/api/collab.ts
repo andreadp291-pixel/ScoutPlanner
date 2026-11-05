@@ -42,5 +42,8 @@ export const approveAccessRequest = (projectId: number, id: number, role: Role) 
 export const rejectAccessRequest = (projectId: number, id: number) =>
   apiFetch<AccessRequest>(`/projects/${projectId}/access-requests/${id}/reject`, { method: 'POST', projectId })
 
+export const sendReportNow = (projectId: number) =>
+  apiFetch<{ ok: boolean }>(`/projects/${projectId}/report/send`, { method: 'POST', projectId })
+
 export const transferOwnership = (projectId: number, email: string) =>
   apiFetch<{ ok: boolean }>(`/projects/${projectId}/transfer`, { method: 'POST', body: { email }, projectId })

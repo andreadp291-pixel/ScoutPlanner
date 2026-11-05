@@ -1,3 +1,4 @@
+import { ActivityAssignees } from '../components/ActivityAssignees'
 import { NoAccess } from '../components/NoAccess'
 import { Comments } from '../components/Comments'
 import { canEditRole } from '../lib/roles'
@@ -82,6 +83,7 @@ export function ActivityDescription() {
       <p className="muted" style={{ marginBottom: 20 }}>
         {activity.start_at.slice(0, 10)} · {activity.start_at.slice(11, 16)}–{activity.end_at.slice(11, 16)}
       </p>
+      <ActivityAssignees projectId={id} activity={activity} />
 
       {canEdit && (
         <div className="editor-mode-tabs">

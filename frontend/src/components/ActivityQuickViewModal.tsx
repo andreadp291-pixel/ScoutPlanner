@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import type { Activity } from '../api/activities'
+import { listActivities, type Activity } from '../api/activities'
 import type { Person } from '../api/people'
+import { ActivityAssignees } from './ActivityAssignees'
 import { formatDayLabel, minutesSinceMidnight, minutesToHHMM } from './calendar/time'
 import { LocationIcon } from './icons/LocationIcon'
 
@@ -11,8 +13,11 @@ interface ActivityQuickViewModalProps {
   onClose: () => void
 }
 
-export function ActivityQuickViewModal({ projectId, activity, people, onClose }: ActivityQuickViewModalProps) {
+export function ActivityQuickViewModal({ projectId, activity: initial, onClose }: ActivityQuickViewModalProps) {
   const navigate = useNavigate()
+  // la copia nella cache si aggiorna quando si segna "fatto"; quella ricevuta dal chiamante resterebbe vecchia
+  const listQuery = useQuery({ queryKey: ['activities', projectId], queryFn: () => listActivities(projectId) })
+  const activity = listQuery.data?.find((a) => a.id === initial.id) ?? initial
 
   const start = minutesToHHMM(minutesSinceMidnight(activity.start_at))
   const end = minutesToHHMM(minutesSinceMidnight(activity.end_at))
@@ -32,12 +37,7 @@ export function ActivityQuickViewModal({ projectId, activity, people, onClose }:
             <LocationIcon size={15} /> {activity.location}
           </p>
         )}
-        {activity.assignees.length > 0 && (
-          <p>
-            <strong>Responsabili:</strong>{' '}
-            {activity.assignees.map((r) => people.find((p) => p.ref === r)?.name ?? '(rimosso)').join(', ')}
-          </p>
-        )}
+        <ActivityAssignees projectId={projectId} activity={activity} />
         <div className="modal-actions">
           <div />
           <div className="modal-actions-primary">

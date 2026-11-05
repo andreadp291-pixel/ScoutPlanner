@@ -5,6 +5,7 @@ import {
   approveAccessRequest,
   listAccessRequests,
   rejectAccessRequest,
+  sendReportNow,
   transferOwnership,
 } from '../api/collab'
 import {
@@ -110,6 +111,10 @@ export function ProjectTokens() {
       queryClient.invalidateQueries({ queryKey: ['access-requests', id] })
       invalidateMembers()
     },
+  })
+  const reportMutation = useMutation({
+    mutationFn: () => sendReportNow(id),
+    onSuccess: () => setInviteNotice('Report in partenza: chi ha attività assegnate lo riceve via email tra poco.'),
   })
   const transferMutation = useMutation({
     mutationFn: () => transferOwnership(id, transferEmail),
@@ -378,6 +383,18 @@ export function ProjectTokens() {
       </table>
       </div>
       {tokensQuery.data?.length === 0 && <p className="muted">Nessun link anonimo ancora.</p>}
+
+      <div className="card" style={{ marginTop: 28 }}>
+        <h2>Report delle attività</h2>
+        <p className="muted">
+          Ogni mattina alle 7, durante il campo, ognuno riceve le proprie attività fatte, da fare e in ritardo; tu vedi anche lo stato di tutti.
+          Ognuno può disattivarlo da «Notifiche email».
+        </p>
+        <button type="button" onClick={() => reportMutation.mutate()} disabled={reportMutation.isPending}>
+          {reportMutation.isPending ? 'Invio...' : 'Invia il report adesso'}
+        </button>
+        {reportMutation.isSuccess && <p className="share-link-box">Report in partenza.</p>}
+      </div>
 
       <form
         className="card"
