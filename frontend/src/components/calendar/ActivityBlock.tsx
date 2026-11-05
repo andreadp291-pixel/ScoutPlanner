@@ -49,6 +49,7 @@ export function ActivityBlock({
   )
   const resizeState = useRef<{ startY: number } | null>(null)
   const blockRef = useRef<HTMLDivElement>(null)
+  const touchTap = useRef(false)
   const swapTargetIdRef = useRef<number | null>(null)
 
   const sameColumn = dragPreview === null || dragPreview.date === ownDate
@@ -85,6 +86,9 @@ export function ActivityBlock({
       ? Math.round((e.clientY - trackRect.top) / pxPerMinute) - startMinutes
       : 0
     dragState.current = { grabOffsetMinutes, startX: e.clientX, startY: e.clientY, moved: false }
+    // col dito il trascinamento resta al browser (scorrimento): qui solo il tocco per aprire
+    touchTap.current = e.pointerType === 'touch'
+    if (touchTap.current) return
     if (canEdit) setDragPreview({ date: ownDate, start: startMinutes })
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
@@ -110,6 +114,13 @@ export function ActivityBlock({
     onDragHoverDate(found.date)
   }
 
+  function handleBodyPointerCancel() {
+    dragState.current = null
+    setDragPreview(null)
+    onDragHoverDate(null)
+    onSwapHoverId(null)
+  }
+
   function handleBodyPointerUp() {
     if (!dragState.current) return
     const { moved } = dragState.current
@@ -124,7 +135,7 @@ export function ActivityBlock({
       onSwap(swapTargetId)
     } else if (canEdit && moved && preview && (preview.date !== ownDate || preview.start !== startMinutes)) {
       onMove(preview.date, preview.start)
-    } else if (!moved) {
+    } else if (!moved && !touchTap.current) {
       onClick()
     }
   }
@@ -161,6 +172,9 @@ export function ActivityBlock({
       onPointerDown={handleBodyPointerDown}
       onPointerMove={handleBodyPointerMove}
       onPointerUp={handleBodyPointerUp}
+      onPointerCancel={handleBodyPointerCancel}
+      // col dito si apre al click (dopo il rilascio): aprendo al pointerup, il click cadrebbe sullo sfondo della finestra e la chiuderebbe subito
+      onClick={() => touchTap.current && onClick()}
       style={{
         position: 'absolute',
         top,
@@ -178,6 +192,13 @@ export function ActivityBlock({
       {height >= 38 && (
         <span className="ab-time">
           {activity.start_at.slice(11, 16)}–{activity.end_at.slice(11, 16)}
+        </span>
+      )}
+      {height >= 38 && activity.group_ids.length > 0 && (
+        <span className="ab-groups">
+          {activity.group_ids.map((g) => (
+            <i key={g} className="gd" style={{ background: `var(--g${g % 6})` }} />
+          ))}
         </span>
       )}
       {canEdit && (

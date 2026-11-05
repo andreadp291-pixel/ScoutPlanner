@@ -72,7 +72,12 @@ export function DayColumn({
     const start = minutesFromPointer(e.clientY)
     dragOrigin.current = start
     setDragPreview({ start, end: start })
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    if (e.pointerType !== 'touch') (e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  function handlePointerCancel() {
+    dragOrigin.current = null
+    setDragPreview(null)
   }
 
   function handlePointerMove(e: React.PointerEvent) {
@@ -134,6 +139,7 @@ export function DayColumn({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {hourLines.map((m) => (
           <div

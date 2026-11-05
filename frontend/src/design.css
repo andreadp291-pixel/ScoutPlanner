@@ -228,7 +228,7 @@ body {
   .day-chip.is-today::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
   .calendar-scroll {
     margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
-    border-radius: 0; border-inline: 0; padding-bottom: 0;
+    border-radius: 0; border-inline: 0; padding-bottom: 0; overflow-y: hidden; /* altrimenti il dito resta agganciato a questo contenitore (8px di scorrimento) e la pagina non scorre */
     scroll-snap-type: x mandatory; scroll-padding-left: 52px; overscroll-behavior-x: contain;
   }
   .calendar-scroll .day-column { width: calc(100% - 52px) !important; flex: 0 0 calc(100% - 52px); scroll-snap-align: start; scroll-snap-stop: always; }
@@ -272,3 +272,16 @@ body {
   background: var(--bg-raised); color: var(--text-h); font-weight: 600; font-size: 15px;
 }
 .google-btn:disabled { opacity: 0.7; }
+
+/* pallini dei gruppi nei blocchi + testo più grande sul telefono, come nei prototipi */
+:root { --g0: #d4572b; --g1: #3f8f5f; --g2: #5b86a8; --g3: #7a5fb3; --g4: #d98a1f; --g5: #b04a7a; }
+.ab-groups { display: flex; gap: 3px; margin-top: auto; }
+.gd { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+@media (max-width: 700px) {
+  .activity-block { padding: 6px 10px; left: 6px !important; right: 8px !important; }
+  .activity-block .ab-title { font-size: 14px; }
+  .activity-block .ab-time { font-size: 12px; }
+}
+
+/* telefono: i blocchi non bloccano lo scorrimento del calendario */
+@media (pointer: coarse) { .activity-block { touch-action: pan-x pan-y; } }
