@@ -1,8 +1,12 @@
 import logging
 import smtplib
 from email.message import EmailMessage
+from pathlib import Path
 
 from .config import FRONTEND_BASE_URL, SMTP_PASSWORD, SMTP_USER
+from .mail_html import to_html
+
+LOGO = Path(__file__).parent / "assets" / "email-logo.png"
 
 logger = logging.getLogger("scoutplanner.mail")
 
@@ -16,7 +20,11 @@ def _send(to_email: str, subject: str, body: str) -> bool:
     msg["Subject"] = subject
     msg["From"] = SMTP_USER
     msg["To"] = to_email
-    msg.set_content(body)
+    msg.set_content(body)  # testo semplice, per chi non vede l'HTML
+    logo = LOGO.read_bytes() if LOGO.exists() else None
+    msg.add_alternative(to_html(subject, body, "logo" if logo else None), subtype="html")
+    if logo:
+        msg.get_payload()[1].add_related(logo, "image", "png", cid="<logo>")
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:

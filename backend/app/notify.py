@@ -14,7 +14,7 @@ logger = logging.getLogger("scoutplanner.notify")
 
 _DAYS = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 _MONTHS = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
-REPORT_HOUR = 7  # i promemoria partono dalle 7 del mattino (ora italiana)
+REPORT_HOUR = 7  # ora di base dei promemoria (italiana), ognuno può cambiarla
 REMINDER_EVERY_DAYS = 3  # promemoria "da compilare": al massimo uno ogni 3 giorni a persona
 
 FOOTER = f"\n\n—\nNon vuoi più queste email? Gestiscile qui: {FRONTEND_BASE_URL}/#/account/email"
@@ -59,6 +59,16 @@ def _opted_in(conn, emails, kind: str) -> list[str]:
         )
     }
     return [e for e in emails if e not in off]
+
+
+def _hours(conn, emails) -> dict[str, int]:
+    """Ora scelta da ciascuno per i promemoria (7 se non ha scelto)."""
+    emails = sorted(set(emails))
+    if not emails:
+        return {}
+    rows = conn.execute(f"SELECT email, reminder_hour FROM email_prefs WHERE email IN ({','.join('?' * len(emails))})", emails)
+    chosen = {r["email"]: r["reminder_hour"] for r in rows}
+    return {e: chosen.get(e, REPORT_HOUR) for e in emails}
 
 
 def deliver(emails, subject: str, body: str, kind: str = "notifications") -> None:
@@ -216,6 +226,8 @@ def send_project_reminders(project_id: int, now: datetime, force: bool = False) 
         contacts = ref_contacts(conn, project_id, refs)
         emails = _opted_in(conn, [e for e, _ in contacts.values()], "report")
         if not force:
+            hours = _hours(conn, emails)
+            emails = [e for e in emails if hours[e] <= now.hour]  # non prima dell'ora scelta
             recent = {
                 r["email"]
                 for r in conn.execute("SELECT email FROM reminder_log WHERE project_id = ? AND day >= ?", (project_id, since))
@@ -244,16 +256,11 @@ def now_local() -> datetime:
 
 
 def run_daily_reminders(now: datetime | None = None) -> int:
-    """Una volta al giorno, dalle 7, solo per i campi non ancora iniziati: durante il campo non parte niente da solo."""
+    """Controlla i campi non ancora iniziati (durante il campo non parte niente da solo). Ognuno riceve il promemoria
+    all'ora che ha scelto (di base le 7); reminder_log evita di riscrivere prima di 3 giorni."""
     now = now or now_local()
-    if now.hour < REPORT_HOUR:
-        return 0
-    day = now.date().isoformat()
     with get_conn() as conn:
-        if conn.execute("SELECT 1 FROM report_runs WHERE day = ?", (day,)).fetchone():
-            return 0
-        conn.execute("INSERT INTO report_runs (day) VALUES (?)", (day,))  # prima di inviare: al massimo una volta
-        upcoming = [r["id"] for r in conn.execute("SELECT id FROM projects WHERE start_date > ?", (day,))]
+        upcoming = [r["id"] for r in conn.execute("SELECT id FROM projects WHERE start_date > ?", (now.date().isoformat(),))]
     return sum(send_project_reminders(pid, now) for pid in upcoming)
 
 

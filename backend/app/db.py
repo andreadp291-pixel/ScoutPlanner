@@ -196,7 +196,8 @@ CREATE INDEX IF NOT EXISTS idx_access_requests_project ON access_requests(projec
 CREATE TABLE IF NOT EXISTS email_prefs (
     email          TEXT PRIMARY KEY,
     notifications  INTEGER NOT NULL DEFAULT 1,
-    report         INTEGER NOT NULL DEFAULT 1
+    report         INTEGER NOT NULL DEFAULT 1,
+    reminder_hour  INTEGER NOT NULL DEFAULT 7  -- a che ora (italiana) mandare i promemoria
 );
 
 -- Fino a quale voce della cronologia ognuno ha visto (campanella delle novità). ref: 'o', 'm<id>' o 't<id>'.
@@ -226,6 +227,7 @@ MIGRATIONS = [
     "ALTER TABLE project_pois ADD COLUMN hours TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE project_tokens ADD COLUMN expires_at TEXT",
     "ALTER TABLE activity_assignees ADD COLUMN done_at TEXT",
+    "ALTER TABLE email_prefs ADD COLUMN reminder_hour INTEGER NOT NULL DEFAULT 7",
     "ALTER TABLE activity_log ADD COLUMN actor_ref TEXT",  # chi ha fatto la cosa: per non avvisarlo delle sue stesse azioni
     "ALTER TABLE activity_log ADD COLUMN for_ref TEXT",  # se c'è, la voce è solo per quella persona (es. assegnazione)
     "ALTER TABLE activities ADD COLUMN deleted_at TEXT",  # cestino

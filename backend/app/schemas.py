@@ -148,6 +148,7 @@ class ActivityDoneIn(BaseModel):
 class EmailPrefsIO(BaseModel):
     notifications: bool
     report: bool
+    reminder_hour: int = Field(default=7, ge=0, le=23)  # ora a cui arriva il promemoria
 
 
 class TokenCreateIn(BaseModel):

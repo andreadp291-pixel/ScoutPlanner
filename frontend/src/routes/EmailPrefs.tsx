@@ -42,6 +42,22 @@ export function EmailPrefs() {
             <strong>Promemoria</strong> — «ti mancano da compilare…» per le attività assegnate a me, prima del campo. Durante il campo non arriva niente di automatico.
           </span>
         </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+          <span>Mandameli alle</span>
+          <select
+            value={prefs.reminder_hour}
+            disabled={mutation.isPending || !prefs.report}
+            onChange={(e) => mutation.mutate({ ...prefs, reminder_hour: Number(e.target.value) })}
+            aria-label="Ora del promemoria"
+          >
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>
+                {String(h).padStart(2, '0')}:00
+              </option>
+            ))}
+          </select>
+          <span className="muted">(ora italiana, al massimo uno ogni 3 giorni)</span>
+        </label>
       </div>
     </div>
   )

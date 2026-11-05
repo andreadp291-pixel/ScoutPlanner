@@ -34,8 +34,12 @@ def _my_email(conn, token: str) -> str:
 def get_email_prefs(token: str = Depends(get_bearer_token)):
     with get_conn() as conn:
         email = _my_email(conn, token)
-        row = conn.execute("SELECT notifications, report FROM email_prefs WHERE email = ?", (email,)).fetchone()
-    return {"notifications": bool(row["notifications"]) if row else True, "report": bool(row["report"]) if row else True}
+        row = conn.execute("SELECT notifications, report, reminder_hour FROM email_prefs WHERE email = ?", (email,)).fetchone()
+    return {
+        "notifications": bool(row["notifications"]) if row else True,
+        "report": bool(row["report"]) if row else True,
+        "reminder_hour": row["reminder_hour"] if row else 7,
+    }
 
 
 @router.put("/email-prefs", response_model=EmailPrefsIO)
@@ -43,8 +47,9 @@ def set_email_prefs(body: EmailPrefsIO, token: str = Depends(get_bearer_token)):
     with get_conn() as conn:
         email = _my_email(conn, token)
         conn.execute(
-            """INSERT INTO email_prefs (email, notifications, report) VALUES (?, ?, ?)
-               ON CONFLICT(email) DO UPDATE SET notifications = excluded.notifications, report = excluded.report""",
-            (email, body.notifications, body.report),
+            """INSERT INTO email_prefs (email, notifications, report, reminder_hour) VALUES (?, ?, ?, ?)
+               ON CONFLICT(email) DO UPDATE SET notifications = excluded.notifications, report = excluded.report,
+                                                reminder_hour = excluded.reminder_hour""",
+            (email, body.notifications, body.report, body.reminder_hour),
         )
     return body

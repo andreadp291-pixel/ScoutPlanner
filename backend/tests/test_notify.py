@@ -51,7 +51,7 @@ def test_assignment_change_and_comment_emails(client, project, outbox):
 def test_email_prefs_opt_out(client, project, outbox):
     h, base = owner(), f"/projects/{project}"
     ref, mia = _member(client, base, h, "off@x.it")
-    assert client.get("/me/email-prefs", headers=mia).json() == {"notifications": True, "report": True}
+    assert client.get("/me/email-prefs", headers=mia).json() == {"notifications": True, "report": True, "reminder_hour": 7}
     assert client.put("/me/email-prefs", json={"notifications": False, "report": True}, headers=mia).status_code == 200
     client.post(f"{base}/activities", json={**ACT, "assignees": [ref]}, headers=h)
     assert outbox == []  # ha disattivato le notifiche
@@ -137,3 +137,17 @@ def test_to_fill_reminders(client, project, outbox):
     outbox.clear()
     assert notify.send_project_reminders(project, datetime(2026, 7, 9, 7, 0), force=True) == 0
     assert notify.is_compiled(doc) and not notify.is_compiled("") and not notify.is_compiled('{"blocks":[]}') and not notify.is_compiled("testo vecchio")
+
+
+def test_reminder_hour_choice(client, project, outbox):
+    h, base = owner(), f"/projects/{project}"
+    ref, mia = _member(client, base, h, "tardi@x.it")
+    client.post(f"{base}/activities", json={**ACT, "assignees": [ref]}, headers=h)  # 2026-07-01, descrizione vuota
+    assert client.put("/me/email-prefs", json={"notifications": True, "report": True, "reminder_hour": 9}, headers=mia).json()["reminder_hour"] == 9
+    assert client.put("/me/email-prefs", json={"notifications": True, "report": True, "reminder_hour": 24}, headers=mia).status_code == 422
+    outbox.clear()
+    notify.send_project_reminders(project, datetime(2026, 6, 20, 8, 0))  # alle 8 lui non ancora (l'owner sì, ora di base 7)
+    assert [to for to, _, _ in outbox] == ["o@x.it"]
+    outbox.clear()
+    notify.send_project_reminders(project, datetime(2026, 6, 20, 9, 0))
+    assert [to for to, _, _ in outbox] == ["tardi@x.it"]
