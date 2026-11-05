@@ -101,3 +101,37 @@ def test_report_content_and_daily_run(client, project, outbox):
     # a mano, solo l'owner
     assert client.post(f"{base}/report/send", headers=h).status_code == 202
     assert client.post(f"{base}/report/send", headers=_member(client, base, h, "e@x.it")[1]).status_code == 403
+
+
+def test_to_fill_reminders(client, project, outbox):
+    h, base = owner(), f"/projects/{project}"
+    ref, _ = _member(client, base, h, "scrive@x.it")
+    doc = '{"blocks":[{"id":"a","type":"title","text":"Piano"}]}'
+    mk = lambda title, day, desc="": client.post(
+        f"{base}/activities",
+        json={**ACT, "title": title, "description": desc, "start_at": f"2026-07-0{day}T09:00", "end_at": f"2026-07-0{day}T10:00", "assignees": [ref]},
+        headers=h,
+    ).json()["id"]
+    mk("Vuota uno", 3)
+    mk("Vuota due", 4)
+    mk("Compilata", 5, doc)
+    mk("Già passata", 1)  # prima di "adesso": non serve più scriverla
+    outbox.clear()
+    now = datetime(2026, 7, 2, 7, 0)
+    assert notify.send_project_reminders(project, now) == 2  # chi scrive e l'owner
+    mails = {to: (s, b) for to, s, b in outbox}
+    subject, body = mails["scrive@x.it"]
+    assert "2 attività" in subject and "Vuota uno" in body and "Vuota due" in body
+    assert "Compilata" not in body and "Già passata" not in body and "/activities/" in body
+    assert "CHI DEVE ANCORA COMPILARE" in mails["o@x.it"][1] and "Mia" in mails["o@x.it"][1]
+    # non si riscrive prima di 3 giorni, ma a mano sì
+    outbox.clear()
+    assert notify.send_project_reminders(project, datetime(2026, 7, 3, 7, 0)) == 0
+    assert notify.send_project_reminders(project, datetime(2026, 7, 2, 12, 0), force=True) == 2
+    assert client.post(f"{base}/report/remind", headers=h).status_code == 202
+    # tutto compilato: niente da dire
+    for a in client.get(f"{base}/activities", headers=h).json():
+        client.patch(f"{base}/activities/{a['id']}", json={"description": doc}, headers=h)
+    outbox.clear()
+    assert notify.send_project_reminders(project, datetime(2026, 7, 9, 7, 0), force=True) == 0
+    assert notify.is_compiled(doc) and not notify.is_compiled("") and not notify.is_compiled('{"blocks":[]}') and not notify.is_compiled("testo vecchio")

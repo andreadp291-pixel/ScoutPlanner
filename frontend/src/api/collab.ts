@@ -45,5 +45,8 @@ export const rejectAccessRequest = (projectId: number, id: number) =>
 export const sendReportNow = (projectId: number) =>
   apiFetch<{ ok: boolean }>(`/projects/${projectId}/report/send`, { method: 'POST', projectId })
 
+export const sendRemindersNow = (projectId: number) =>
+  apiFetch<{ ok: boolean }>(`/projects/${projectId}/report/remind`, { method: 'POST', projectId })
+
 export const transferOwnership = (projectId: number, email: string) =>
   apiFetch<{ ok: boolean }>(`/projects/${projectId}/transfer`, { method: 'POST', body: { email }, projectId })

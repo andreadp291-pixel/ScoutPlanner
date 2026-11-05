@@ -197,6 +197,14 @@ CREATE TABLE IF NOT EXISTS email_prefs (
     report         INTEGER NOT NULL DEFAULT 1
 );
 
+-- Promemoria "ti mancano da compilare" già mandati: serve a non scrivere alla stessa persona ogni giorno.
+CREATE TABLE IF NOT EXISTS reminder_log (
+    project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    email       TEXT NOT NULL,
+    day         TEXT NOT NULL,
+    PRIMARY KEY (project_id, email, day)
+);
+
 -- Giorni per cui il report è già partito (uno al giorno).
 CREATE TABLE IF NOT EXISTS report_runs (day TEXT PRIMARY KEY);
 """

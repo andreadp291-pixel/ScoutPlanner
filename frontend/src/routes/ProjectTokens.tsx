@@ -6,6 +6,7 @@ import {
   listAccessRequests,
   rejectAccessRequest,
   sendReportNow,
+  sendRemindersNow,
   transferOwnership,
 } from '../api/collab'
 import {
@@ -116,6 +117,7 @@ export function ProjectTokens() {
     mutationFn: () => sendReportNow(id),
     onSuccess: () => setInviteNotice('Report in partenza: chi ha attività assegnate lo riceve via email tra poco.'),
   })
+  const remindMutation = useMutation({ mutationFn: () => sendRemindersNow(id) })
   const transferMutation = useMutation({
     mutationFn: () => transferOwnership(id, transferEmail),
     onSuccess: () => {
@@ -385,15 +387,21 @@ export function ProjectTokens() {
       {tokensQuery.data?.length === 0 && <p className="muted">Nessun link anonimo ancora.</p>}
 
       <div className="card" style={{ marginTop: 28 }}>
-        <h2>Report delle attività</h2>
+        <h2>Promemoria e report</h2>
         <p className="muted">
-          Ogni mattina alle 7, durante il campo, ognuno riceve le proprie attività fatte, da fare e in ritardo; tu vedi anche lo stato di tutti.
-          Ognuno può disattivarlo da «Notifiche email».
+          Prima del campo, ogni 3 giorni, chi ha attività assegnate ancora da compilare riceve «ti mancano da compilare…» con i link;
+          tu vedi anche chi manca. Durante il campo, ogni mattina alle 7, ognuno riceve le proprie attività fatte, da fare e in ritardo.
+          Ognuno può disattivarli da «Notifiche email».
         </p>
-        <button type="button" onClick={() => reportMutation.mutate()} disabled={reportMutation.isPending}>
-          {reportMutation.isPending ? 'Invio...' : 'Invia il report adesso'}
-        </button>
-        {reportMutation.isSuccess && <p className="share-link-box">Report in partenza.</p>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => remindMutation.mutate()} disabled={remindMutation.isPending}>
+            {remindMutation.isPending ? 'Invio...' : 'Invia ora i promemoria da compilare'}
+          </button>
+          <button type="button" onClick={() => reportMutation.mutate()} disabled={reportMutation.isPending}>
+            {reportMutation.isPending ? 'Invio...' : 'Invia ora il report'}
+          </button>
+        </div>
+        {(remindMutation.isSuccess || reportMutation.isSuccess) && <p className="share-link-box">In partenza: arriva via email tra poco.</p>}
       </div>
 
       <form

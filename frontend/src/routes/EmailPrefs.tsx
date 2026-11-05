@@ -39,7 +39,7 @@ export function EmailPrefs() {
             onChange={(e) => mutation.mutate({ ...prefs, report: e.target.checked })}
           />
           <span>
-            <strong>Report del mattino</strong> — ogni giorno alle 7, durante il campo: le mie attività fatte, da fare e in ritardo.
+            <strong>Promemoria e report</strong> — «ti mancano da compilare…» prima del campo, e ogni mattina alle 7 durante il campo le mie attività fatte, da fare e in ritardo.
           </span>
         </label>
       </div>

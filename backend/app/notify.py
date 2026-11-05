@@ -1,6 +1,7 @@
 """Email di notifica (assegnazioni, modifiche, commenti) e report giornaliero delle attività assegnate."""
 
 import asyncio
+import json
 import logging
 from datetime import date, datetime, timedelta
 
@@ -14,6 +15,7 @@ logger = logging.getLogger("scoutplanner.notify")
 _DAYS = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 _MONTHS = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
 REPORT_HOUR = 7  # il report parte dalle 7 del mattino (ora italiana)
+REMINDER_EVERY_DAYS = 3  # promemoria "da compilare": al massimo uno ogni 3 giorni a persona
 
 FOOTER = f"\n\n—\nNon vuoi più queste email? Gestiscile qui: {FRONTEND_BASE_URL}/#/account/email"
 
@@ -93,6 +95,27 @@ def _split(rows, now_str: str):
     return done, late, todo
 
 
+def is_compiled(description: str) -> bool:
+    """Un'attività è compilata se la sua descrizione è un documento con almeno un blocco (come nell'editor)."""
+    try:
+        doc = json.loads(description or "")
+    except ValueError:
+        return False
+    return isinstance(doc, dict) and bool(doc.get("blocks"))
+
+
+def _missing(conn, project_id: int, now_str: str, ref: str | None = None):
+    """Attività assegnate, non ancora iniziate, con la descrizione ancora vuota."""
+    sql = """SELECT a.id, a.title, a.start_at, a.end_at, a.description, aa.person_ref
+             FROM activity_assignees aa JOIN activities a ON a.id = aa.activity_id
+             WHERE a.project_id = ? AND a.deleted_at IS NULL AND a.start_at > ?"""
+    args: list = [project_id, now_str]
+    if ref:
+        sql += " AND aa.person_ref = ?"
+        args.append(ref)
+    return [r for r in conn.execute(sql + " ORDER BY a.start_at", args) if not is_compiled(r["description"])]
+
+
 def _lines(rows) -> str:
     return "\n".join(f"  • {r['title']} — {when_text(r['start_at'], r['end_at'])}" for r in rows) or "  (nessuna)"
 
@@ -112,6 +135,9 @@ def build_report(conn, project, ref: str, name: str, now: datetime) -> str | Non
             parts.append("In ritardo:\n" + _lines(late) + "\n")
         parts.append("Da fare:\n" + _lines(todo) + "\n")
         parts.append("Fatte:\n" + _lines(done) + "\n")
+    to_write = _missing(conn, project["id"], now_str, ref)
+    if to_write:
+        parts.append(f"ANCORA DA COMPILARE ({len(to_write)})\n" + _lines(to_write) + "\n")
     if everyone:
         names = {p["ref"]: p["name"] for p in project_people(conn, project["id"])}
         parts.append("STATO DEL PROGETTO (solo per te, che sei il proprietario)")
@@ -147,6 +173,67 @@ def send_project_report(project_id: int, now: datetime) -> int:
     return sent
 
 
+def build_reminder(conn, project, ref: str, name: str, now: datetime) -> tuple[str, str] | None:
+    """(oggetto, testo) del promemoria "ti mancano da compilare"; None se non manca niente."""
+    now_str = now.strftime("%Y-%m-%dT%H:%M")
+    mine = _missing(conn, project["id"], now_str, ref)
+    everyone = _missing(conn, project["id"], now_str) if ref == "o" else []
+    if not mine and not everyone:
+        return None
+    parts = [f"Ciao {name},"]
+    if mine:
+        parts.append(f"nel vademecum «{project['name']}» ti mancano ancora da compilare {len(mine)} attività:\n")
+        parts += [f"  • {r['title']} — {when_text(r['start_at'], r['end_at'])}\n    {project_url(project['id'], r['id'])}" for r in mine]
+    else:
+        parts.append(f"il tuo lavoro sul vademecum «{project['name']}» è a posto, ma ci sono attività altrui ancora da compilare.")
+    if everyone:
+        names = {p["ref"]: p["name"] for p in project_people(conn, project["id"])}
+        parts.append("\nCHI DEVE ANCORA COMPILARE (solo per te, che sei il proprietario)")
+        for pref in dict.fromkeys(r["person_ref"] for r in everyone):
+            titles = ", ".join(r["title"] for r in everyone if r["person_ref"] == pref)
+            parts.append(f"  • {names.get(pref, '(rimosso)')}: {titles}")
+    parts.append(f"\nApri il progetto: {project_url(project['id'])}")
+    subject = (
+        f"Ti mancano da compilare {len(mine)} attività — «{project['name']}»"
+        if mine
+        else f"Vademecum «{project['name']}»: attività ancora da compilare"
+    )
+    return subject, "\n".join(parts)
+
+
+def send_project_reminders(project_id: int, now: datetime, force: bool = False) -> int:
+    """Promemoria a chi ha attività assegnate ancora da compilare (e all'owner). Senza force: al massimo uno ogni 3 giorni."""
+    day = now.date().isoformat()
+    since = (now.date() - timedelta(days=REMINDER_EVERY_DAYS - 1)).isoformat()
+    now_str = now.strftime("%Y-%m-%dT%H:%M")
+    with get_conn() as conn:
+        project = conn.execute("SELECT id, name FROM projects WHERE id = ?", (project_id,)).fetchone()
+        if project is None:
+            return 0
+        refs = {r["person_ref"] for r in _missing(conn, project_id, now_str)}
+        if refs:
+            refs.add("o")
+        contacts = ref_contacts(conn, project_id, refs)
+        emails = _opted_in(conn, [e for e, _ in contacts.values()], "report")
+        if not force:
+            recent = {
+                r["email"]
+                for r in conn.execute("SELECT email FROM reminder_log WHERE project_id = ? AND day >= ?", (project_id, since))
+            }
+            emails = [e for e in emails if e not in recent]
+        mails = []
+        for ref, (email, name) in contacts.items():
+            if email in emails and (built := build_reminder(conn, project, ref, name, now)):
+                mails.append((email, *built))
+    sent = 0
+    for email, subject, body in mails:
+        if _send(email, subject, body + FOOTER):
+            sent += 1
+            with get_conn() as conn:
+                conn.execute("INSERT OR IGNORE INTO reminder_log (project_id, email, day) VALUES (?, ?, ?)", (project_id, email, day))
+    return sent
+
+
 def now_local() -> datetime:
     try:
         from zoneinfo import ZoneInfo
@@ -173,7 +260,10 @@ def run_daily_reports(now: datetime | None = None) -> int:
                 ((now.date() + timedelta(days=7)).isoformat(), day),
             )
         ]
-    return sum(send_project_report(pid, now) for pid in ids)
+    sent = sum(send_project_report(pid, now) for pid in ids)
+    with get_conn() as conn:  # promemoria "da compilare": finché il campo non è iniziato
+        upcoming = [r["id"] for r in conn.execute("SELECT id FROM projects WHERE start_date > ?", (day,))]
+    return sent + sum(send_project_reminders(pid, now) for pid in upcoming)
 
 
 async def report_loop() -> None:
