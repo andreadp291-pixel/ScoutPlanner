@@ -57,7 +57,7 @@ def _bullets(items: list[tuple[str, str | None]]) -> str:
     )
 
 
-def to_html(subject: str, text: str, logo_cid: str | None = "logo") -> str:
+def to_html(subject: str, text: str, logo_cid: str | None = "logo", bg_url: str | None = None) -> str:
     lines = text.split("\n")
     out: list[str] = []
     bullets: list[tuple[str, str | None]] = []
@@ -112,10 +112,13 @@ def to_html(subject: str, text: str, logo_cid: str | None = "logo") -> str:
         foot = f'<p style="margin:26px 0 0;padding-top:14px;border-top:1px solid {LINE};font:12px/1.5 {FONT};color:{MUTED}">' + "<br>".join(parts) + "</p>"
 
     logo = f'<img src="cid:{logo_cid}" width="34" height="34" alt="" style="display:block;border-radius:9px">' if logo_cid else ""
+    # sfondo a curve di livello come nell'app: immagine ospitata sul sito (dove manca resta il colore pieno)
+    bg_attr = f' background="{_e(bg_url)}"' if bg_url else ""
+    bg_style = f"background:{BG} url('{_e(bg_url)}') no-repeat right top" if bg_url else f"background:{BG}"
     return f"""<!doctype html>
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_e(subject)}</title></head>
 <body style="margin:0;padding:0;background:{BG}">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{BG}"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="{BG}"{bg_attr} style="{bg_style}"><tr><td align="center" style="padding:24px 12px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px">
     <tr><td style="background:{GREEN};border-radius:20px 20px 0 0;padding:20px 24px">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>

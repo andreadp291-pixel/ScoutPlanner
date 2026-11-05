@@ -22,7 +22,7 @@ def _send(to_email: str, subject: str, body: str) -> bool:
     msg["To"] = to_email
     msg.set_content(body)  # testo semplice, per chi non vede l'HTML
     logo = LOGO.read_bytes() if LOGO.exists() else None
-    msg.add_alternative(to_html(subject, body, "logo" if logo else None), subtype="html")
+    msg.add_alternative(to_html(subject, body, "logo" if logo else None, f"{FRONTEND_BASE_URL}/email-bg.png"), subtype="html")
     if logo:
         msg.get_payload()[1].add_related(logo, "image", "png", cid="<logo>")
 
