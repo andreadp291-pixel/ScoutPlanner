@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="1200" height="320" rx="20" fill="#24503a"/>
+  <g fill="none" stroke="#fff" stroke-opacity="0.07" stroke-width="2">
+    <circle cx="1000" cy="330" r="60"/><circle cx="1000" cy="330" r="120"/><circle cx="1000" cy="330" r="180"/>
+    <circle cx="1000" cy="330" r="240"/><circle cx="1000" cy="330" r="300"/><circle cx="1000" cy="330" r="360"/>
+  </g>
+  <circle cx="1090" cy="80" r="28" fill="#d4572b"/>
+  <path d="M700 320 L840 150 L940 260 L1040 190 L1200 300 V320Z" fill="#3f6b57"/>
+  <path d="M760 320 L900 210 L1010 320Z" fill="#567d69"/>
+  <path d="M905 318 L965 200 L1025 318Z" fill="#2c6a4a"/>
+  <path d="M965 200 L984 318 L946 318Z" fill="#eef2ec"/>
+  <path d="M1100 318C1068 318 1060 288 1080 258C1086 274 1094 278 1100 280C1098 266 1104 250 1114 240C1138 268 1136 318 1100 318Z" fill="#d4572b"/>
+  <g transform="translate(70 84) scale(3)">
+    <path d="M12 3L21 19H15L12 13L9 19H3L12 3Z" fill="#fff"/>
+    <path d="M2 20H22" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+  <text x="160" y="140" font-size="64" font-weight="800" fill="#fff">ScoutPlanner</text>
+  <text x="74" y="200" font-size="28" fill="#cfe3d6">Il vademecum del campo, scritto insieme.</text>
+  <text x="74" y="244" font-size="20" fill="#9fc2ad">Orari al minuto · materiali · mappe · contatti</text>
+</svg>
