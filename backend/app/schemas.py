@@ -25,7 +25,7 @@ class RequestLinkIn(BaseModel):
 
 
 class GoogleLoginIn(BaseModel):
-    credential: str = Field(min_length=1)
+    access_token: str = Field(min_length=1)
 
 
 class OwnerSessionOut(BaseModel):

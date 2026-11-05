@@ -70,23 +70,22 @@ def generate_temp_password(length: int = 12) -> str:
     return "".join(secrets.choice(_TEMP_PASSWORD_ALPHABET) for _ in range(length))
 
 
-def verify_google_credential(credential: str, client_id: str) -> dict | None:
-    """Controlla un ID token di Google e restituisce {"email", "name"}, o None se non è valido.
+def verify_google_access_token(access_token: str, client_id: str) -> dict | None:
+    """Controlla un access token di Google (popup "Continua con Google") e restituisce {"email"}, o None.
 
     shortcut: usa l'endpoint tokeninfo di Google (una chiamata per login), che Google sconsiglia
-    per traffico alto; passare alla verifica locale delle firme (JWKS) se i login diventano molti.
+    per traffico alto; passare a una verifica locale se i login diventano molti.
     """
-    url = "https://oauth2.googleapis.com/tokeninfo?" + urllib.parse.urlencode({"id_token": credential})
+    url = "https://oauth2.googleapis.com/tokeninfo?" + urllib.parse.urlencode({"access_token": access_token})
     try:
         with urllib.request.urlopen(url, timeout=5) as resp:
             data = json.load(resp)
     except (urllib.error.URLError, OSError, ValueError):
         return None
-    # tokeninfo ha già controllato firma e scadenza: qui si controlla che il token sia per NOI.
+    # tokeninfo ha già controllato validità e scadenza: qui si controlla che il token sia emesso per la NOSTRA app
+    # (altrimenti un'altra app a cui l'utente ha dato accesso potrebbe farsi passare per lui).
     if data.get("aud") != client_id:
-        return None
-    if data.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
         return None
     if data.get("email_verified") not in ("true", True) or not data.get("email"):
         return None
-    return {"email": data["email"].lower(), "name": data.get("name") or ""}
+    return {"email": data["email"].lower()}

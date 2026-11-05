@@ -23,7 +23,7 @@ from ..security import (
     create_member_session_token,
     create_owner_session_token,
     ph,
-    verify_google_credential,
+    verify_google_access_token,
     verify_magic_link_token,
 )
 
@@ -169,7 +169,7 @@ def owner_login(body: OwnerLoginIn, request: Request):
 def google_login(body: GoogleLoginIn):
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=503, detail="Login con Google non configurato")
-    info = verify_google_credential(body.credential, GOOGLE_CLIENT_ID)
+    info = verify_google_access_token(body.access_token, GOOGLE_CLIENT_ID)
     if info is None:
         raise HTTPException(status_code=401, detail="Accesso con Google non valido")
     email = info["email"]

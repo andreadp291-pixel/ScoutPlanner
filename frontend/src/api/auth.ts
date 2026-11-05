@@ -50,6 +50,6 @@ export interface GoogleSession {
   owner_projects: number
 }
 
-export function googleLogin(credential: string) {
-  return apiFetch<GoogleSession>('/auth/google', { method: 'POST', body: { credential } })
+export function googleLogin(accessToken: string) {
+  return apiFetch<GoogleSession>('/auth/google', { method: 'POST', body: { access_token: accessToken } })
 }

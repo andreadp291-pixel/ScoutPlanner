@@ -265,3 +265,10 @@ body {
 .time-axis-label { font-family: var(--mono); font-weight: 600; }
 .hour-line { opacity: 0.65; }
 .day-column-header { font-family: var(--display); font-size: 13.5px; }
+
+/* pulsante "Continua con Google": a tutta larghezza, stesso stile a pillola degli altri */
+.google-btn {
+  width: 100%; justify-content: center; gap: 10px; min-height: 44px; border-radius: 99px;
+  background: var(--bg-raised); color: var(--text-h); font-weight: 600; font-size: 15px;
+}
+.google-btn:disabled { opacity: 0.7; }
