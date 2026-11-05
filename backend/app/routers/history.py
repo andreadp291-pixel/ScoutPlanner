@@ -18,11 +18,23 @@ _TABLES = {"activity": "activities", "page": "project_pages"}
 _ACTIVITY_FIELDS = ("title", "description", "location", "category", "color", "materials", "start_at", "end_at")
 
 
-def log_change(conn, actor: Actor, entity: str, entity_id: int, action: str, title: str, summary: str = "", before=None) -> None:
+def log_change(
+    conn, actor: Actor, entity: str, entity_id: int, action: str, title: str, summary: str = "", before=None, for_ref: str | None = None
+) -> None:
     conn.execute(
-        "INSERT INTO activity_log (project_id, entity, entity_id, action, actor, title, summary, before) VALUES (?,?,?,?,?,?,?,?)",
-        (actor.project_id, entity, entity_id, action, actor.name, title, summary, json.dumps(before) if before is not None else None),
+        "INSERT INTO activity_log (project_id, entity, entity_id, action, actor, actor_ref, title, summary, before, for_ref)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (actor.project_id, entity, entity_id, action, actor.name, actor.ref, title, summary,
+         json.dumps(before) if before is not None else None, for_ref),
     )
+
+
+def last_editor(conn, project_id: int, entity: str, entity_id: int) -> str:
+    row = conn.execute(
+        "SELECT actor FROM activity_log WHERE project_id = ? AND entity = ? AND entity_id = ? AND for_ref IS NULL ORDER BY id DESC LIMIT 1",
+        (project_id, entity, entity_id),
+    ).fetchone()
+    return row["actor"] if row else "qualcun altro"
 
 
 def purge_trash() -> None:
@@ -36,7 +48,7 @@ def purge_trash() -> None:
 def list_history(limit: int = 100, actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM activity_log WHERE project_id = ? ORDER BY id DESC LIMIT ?", (actor.project_id, min(max(limit, 1), 500))
+            "SELECT * FROM activity_log WHERE project_id = ? AND for_ref IS NULL ORDER BY id DESC LIMIT ?", (actor.project_id, min(max(limit, 1), 500))
         ).fetchall()
     return [{**{k: r[k] for k in ("id", "entity", "entity_id", "action", "actor", "title", "summary", "created_at")},
              "restorable": r["before"] is not None} for r in rows]

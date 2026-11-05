@@ -1,3 +1,5 @@
+import { ConflictBanner } from '../components/ConflictBanner'
+import { isConflict, useEditBase } from '../lib/useEditBase'
 import { NoAccess } from '../components/NoAccess'
 import { Comments } from '../components/Comments'
 import { canEditRole } from '../lib/roles'
@@ -31,15 +33,28 @@ export function ProjectPageEditor() {
   const groupsQuery = useQuery({ queryKey: ['groups', id], queryFn: () => listGroups(id) })
   const pageQuery = useQuery({ queryKey: ['page', id, pid], queryFn: () => getPage(id, pid) })
 
+  const dirty = title !== null || pendingContent !== null
+  const { base, setBase, conflict } = useEditBase(pageQuery.data?.updated_at, dirty)
+
   const saveMutation = useMutation({
-    mutationFn: (input: { title?: string; content?: string }) => updatePage(id, pid, input),
-    onSuccess: () => {
+    mutationFn: (v: { title?: string; content?: string; force?: boolean }) =>
+      updatePage(id, pid, {
+        title: v.title,
+        content: v.content,
+        ...(v.force || base === null ? {} : { if_updated_at: base }),
+      }),
+    onSuccess: (p) => {
+      setBase(p.updated_at)
       queryClient.invalidateQueries({ queryKey: ['page', id, pid] })
       queryClient.invalidateQueries({ queryKey: ['pages', id] })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     },
-    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
+    onError: (err, vars) => {
+      if (isConflict(err)) {
+        if (window.confirm(`${err.message}.\n\nSovrascrivere con le tue modifiche? (Annulla per tenere la loro versione.)`)) saveMutation.mutate({ ...vars, force: true })
+      } else alert(err instanceof Error ? err.message : 'Errore durante il salvataggio')
+    },
   })
 
   if (pageQuery.isLoading) return <Spinner label="Caricamento pagina..." />
@@ -63,6 +78,16 @@ export function ProjectPageEditor() {
           Torna a Info generali
         </Link>
       </p>
+
+      {conflict && (
+        <ConflictBanner
+          what="questa pagina"
+          onReload={() => {
+            setTitle(null)
+            setPendingContent(null)
+          }}
+        />
+      )}
 
       {canEdit ? (
         <input

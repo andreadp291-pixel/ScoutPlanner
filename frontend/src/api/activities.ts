@@ -30,6 +30,7 @@ export interface ActivityInput {
   end_at: string
   group_ids?: number[]
   assignees?: string[]
+  if_updated_at?: string // versione su cui ho lavorato: se nel frattempo è cambiata, il server risponde 409
 }
 
 export function listActivities(projectId: number) {

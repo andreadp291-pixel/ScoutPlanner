@@ -1,3 +1,5 @@
+import { NotificationBell, PresenceBar } from './LiveBar'
+import { useViewModeStore } from '../state/viewModeStore'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useMatch } from 'react-router-dom'
 import { getProject } from '../api/projects'
@@ -24,6 +26,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const memberName = useMemberAuthStore((s) => s.displayName)
   const memberLogout = useMemberAuthStore((s) => s.logout)
 
+  const editing = useViewModeStore((s) => s.mode) === 'edit'
   const match = useMatch('/projects/:projectId/*')
   const projectId = match && /^\d+$/.test(match.params.projectId ?? '') ? Number(match.params.projectId) : null
   const projectQuery = useQuery({
@@ -34,6 +37,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   if (AUTH_PATHS.includes(pathname)) return <>{children}</>
 
+  const placeMatch = /\/projects\/\d+\/(activities|pages)\/(\d+)/.exec(pathname)
+  const place = placeMatch ? `${placeMatch[1] === 'pages' ? 'page' : 'activity'}:${placeMatch[2]}` : 'project'
   const projectsHome = ownerEmail ? '/projects' : '/me/projects'
   const base = `/projects/${projectId}`
   const sections =
@@ -89,6 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
         <div className="app-header-actions">
+          {projectId !== null && <NotificationBell projectId={projectId} />}
           <ViewModeToggle />
           <ThemeToggle />
           {accountLabel && (
@@ -96,6 +102,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </header>
+      {projectId !== null && <PresenceBar projectId={projectId} place={place} editing={editing} />}
       <main className="page">{children}</main>
       {sections.length > 0 && (
         <nav className="tabbar" aria-label="Sezioni del progetto">

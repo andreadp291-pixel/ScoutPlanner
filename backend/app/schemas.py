@@ -87,6 +87,8 @@ class ActivityUpdateIn(BaseModel):
     end_at: IsoDateTime | None = None
     group_ids: list[int] | None = None
     assignees: list[str] | None = None
+    # updated_at che il client aveva caricato: se nel frattempo è cambiato, la modifica è in conflitto (409)
+    if_updated_at: str | None = None
 
     @model_validator(mode="after")
     def no_explicit_null(self):
@@ -280,6 +282,8 @@ class PageCreateIn(BaseModel):
 class PageUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     content: str | None = None
+    if_updated_at: str | None = None
+
     @model_validator(mode="after")
     def no_explicit_null(self):
         for name in self.model_fields_set - {"lat", "lon"}:
@@ -392,3 +396,33 @@ class AccessApproveIn(BaseModel):
 
 class TransferIn(BaseModel):
     email: Email
+
+
+class PresenceIn(BaseModel):
+    place: str = Field(pattern=r"^(project|activity:\d+|page:\d+)$")  # dove sono: panoramica/calendario, un'attività, una pagina
+    editing: bool = False
+
+
+class PresenceOut(BaseModel):
+    ref: str
+    name: str
+    place: str
+    editing: bool
+
+
+class NotificationOut(BaseModel):
+    id: int
+    entity: str
+    entity_id: int
+    action: str
+    actor: str
+    title: str
+    summary: str
+    created_at: str
+    unread: bool
+
+
+class NotificationsOut(BaseModel):
+    latest_id: int  # ultima voce del progetto: cambia quando qualcuno fa qualcosa
+    unread: int
+    items: list[NotificationOut]

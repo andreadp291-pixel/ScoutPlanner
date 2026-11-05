@@ -159,6 +159,8 @@ CREATE TABLE IF NOT EXISTS activity_log (
     title         TEXT NOT NULL,
     summary       TEXT NOT NULL DEFAULT '',
     before        TEXT,
+    actor_ref     TEXT,
+    for_ref       TEXT,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_activity_log_project ON activity_log(project_id, id);
@@ -197,6 +199,14 @@ CREATE TABLE IF NOT EXISTS email_prefs (
     report         INTEGER NOT NULL DEFAULT 1
 );
 
+-- Fino a quale voce della cronologia ognuno ha visto (campanella delle novità). ref: 'o', 'm<id>' o 't<id>'.
+CREATE TABLE IF NOT EXISTS log_seen (
+    project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    ref         TEXT NOT NULL,
+    last_id     INTEGER NOT NULL,
+    PRIMARY KEY (project_id, ref)
+);
+
 -- Promemoria "ti mancano da compilare" già mandati: serve a non scrivere alla stessa persona ogni giorno.
 CREATE TABLE IF NOT EXISTS reminder_log (
     project_id  INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -216,6 +226,8 @@ MIGRATIONS = [
     "ALTER TABLE project_pois ADD COLUMN hours TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE project_tokens ADD COLUMN expires_at TEXT",
     "ALTER TABLE activity_assignees ADD COLUMN done_at TEXT",
+    "ALTER TABLE activity_log ADD COLUMN actor_ref TEXT",  # chi ha fatto la cosa: per non avvisarlo delle sue stesse azioni
+    "ALTER TABLE activity_log ADD COLUMN for_ref TEXT",  # se c'è, la voce è solo per quella persona (es. assegnazione)
     "ALTER TABLE activities ADD COLUMN deleted_at TEXT",  # cestino
     "ALTER TABLE project_pages ADD COLUMN deleted_at TEXT",
 ]

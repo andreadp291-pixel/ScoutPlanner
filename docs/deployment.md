@@ -1,9 +1,12 @@
-# Deploy backend sul Raspberry Pi
+# Deploy del backend su un server Linux
+
+Esempio con systemd. Va bene qualsiasi macchina Linux con Python 3.11+ (un Raspberry Pi basta e avanza).
+Il database è un file SQLite: niente altro da installare.
 
 ## Prima volta
 
 ```bash
-ssh andrea@192.168.1.139
+ssh UTENTE@INDIRIZZO-DEL-SERVER
 cd ~
 git clone https://github.com/andreadp291-pixel/ScoutPlanner.git
 cd ScoutPlanner/backend
@@ -12,12 +15,23 @@ python3 -m venv venv
 cp .env.example .env
 # Modifica .env: genera SECRET_KEY con
 python3 -c "import secrets; print(secrets.token_hex(32))"
-# e imposta SMTP_USER/SMTP_PASSWORD (stessi di /home/andrea/segnalazioni/.env)
+# e imposta SMTP_USER / SMTP_PASSWORD (account Gmail con password per le app) per le email
 ```
 
-## systemd unit
+Variabili principali di `.env` (vedi `.env.example`):
 
-Crea `/etc/systemd/system/scoutplanner.service` con questo comando (heredoc, evita errori di copia-incolla in editor):
+| Variabile | A cosa serve |
+|---|---|
+| `SECRET_KEY` | firma delle sessioni, obbligatoria |
+| `SMTP_USER`, `SMTP_PASSWORD` | invio email (link di accesso, inviti, notifiche, promemoria). Senza, le email finiscono nel log e i promemoria automatici non partono |
+| `GOOGLE_CLIENT_ID` | attiva «Continua con Google» (valore pubblico, niente segreto) |
+| `FRONTEND_ORIGIN` | origine del frontend per il CORS, senza path (es. `https://UTENTE.github.io`) |
+| `FRONTEND_BASE_URL` | indirizzo completo del frontend, con il path del repo: serve ai link nelle email |
+| `DB_PATH`, `UPLOADS_DIR` | dove tenere database e file caricati |
+
+## systemd
+
+Crea `/etc/systemd/system/scoutplanner.service` (sostituisci `UTENTE` con l'utente che esegue il servizio):
 
 ```bash
 sudo tee /etc/systemd/system/scoutplanner.service > /dev/null <<'EOF'
@@ -27,10 +41,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=andrea
-WorkingDirectory=/home/andrea/ScoutPlanner/backend
-EnvironmentFile=/home/andrea/ScoutPlanner/backend/.env
-ExecStart=/home/andrea/ScoutPlanner/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8093
+User=UTENTE
+WorkingDirectory=/home/UTENTE/ScoutPlanner/backend
+EnvironmentFile=/home/UTENTE/ScoutPlanner/backend/.env
+ExecStart=/home/UTENTE/ScoutPlanner/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8093
 Restart=on-failure
 
 [Install]
@@ -44,31 +58,22 @@ sudo systemctl enable --now scoutplanner.service
 sudo systemctl status scoutplanner.service
 ```
 
-## Esposizione via Tailscale Funnel
+## Renderlo raggiungibile da internet
 
-Aggiungi il nuovo path `/scoutplanner` alla configurazione Funnel esistente (senza toccare gli altri path già mappati su `/`, `/segnalazioni`, ecc.):
+Il servizio ascolta solo su `127.0.0.1:8093`. Per usarlo dal frontend serve un indirizzo HTTPS pubblico che
+inoltri a quella porta: un reverse proxy (nginx, Caddy), un tunnel (Cloudflare Tunnel, Tailscale Funnel…) o
+quello che usi già. Il frontend lo cerca in `VITE_API_BASE` (file `frontend/.env.production`).
 
-```bash
-sudo tailscale serve --bg --set-path /scoutplanner http://127.0.0.1:8093
-```
-
-> ⚠️ **Attenzione**: questo comando (`tailscale serve --set-path`, senza `funnel`) può disattivare silenziosamente il flag `AllowFunnel` (accesso pubblico da internet) sulla porta 443, riportando `/` e `/segnalazioni` a "solo tailnet". Verifica sempre con `tailscale serve status --json` che `AllowFunnel` sia `true` per la porta 443 dopo ogni modifica. Se è sparito, ripristinalo con:
-> ```bash
-> sudo tailscale funnel --bg --set-path / http://127.0.0.1:8000
-> ```
-> (riabilita il Funnel pubblico senza rimuovere gli altri path già mappati).
-
-Verifica con:
+Verifica:
 
 ```bash
-tailscale serve status --json   # controlla AllowFunnel per ogni porta
-curl https://andrea.tail04be23.ts.net/scoutplanner/health
+curl https://TUO-INDIRIZZO/scoutplanner/health   # {"status":"ok"}
 ```
 
 ## Aggiornamenti successivi
 
 ```bash
-ssh andrea@192.168.1.139
+ssh UTENTE@INDIRIZZO-DEL-SERVER
 cd ~/ScoutPlanner
 git pull
 cd backend
@@ -76,8 +81,12 @@ cd backend
 sudo systemctl restart scoutplanner.service
 ```
 
+Le modifiche al database (nuove colonne e tabelle) si applicano da sole all'avvio.
+
 ## Note
 
-- Il database SQLite (`scoutplanner.db`) vive nella cartella `backend/` sul Pi — non è versionato in git, backuppalo periodicamente (es. `cp scoutplanner.db scoutplanner.db.bak`).
-- `FRONTEND_ORIGIN` in `.env` deve essere esattamente `https://andreadp291-pixel.github.io` (senza path), altrimenti il CORS blocca le richieste dal frontend.
-- `FRONTEND_BASE_URL` deve includere il path del repo (`https://andreadp291-pixel.github.io/ScoutPlanner`) perché è usato per costruire il link nel magic-link email.
+- Il database SQLite (`scoutplanner.db`) vive nella cartella `backend/` e non è versionato: fanne una copia prima di
+  ogni aggiornamento importante (`sqlite3 scoutplanner.db ".backup scoutplanner.db.bak"`).
+- Il backend usa un solo processo: la presenza «chi c'è adesso» è tenuta in memoria. Con più processi servirebbe
+  una tabella condivisa.
+- `FRONTEND_ORIGIN` deve combaciare esattamente con l'origine del frontend, altrimenti il CORS blocca le richieste.

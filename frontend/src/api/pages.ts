@@ -23,7 +23,7 @@ export function getPage(projectId: number, pageId: number) {
   return apiFetch<ProjectPage>(`/projects/${projectId}/pages/${pageId}`, { projectId })
 }
 
-export function updatePage(projectId: number, pageId: number, input: Partial<{ title: string; content: string }>) {
+export function updatePage(projectId: number, pageId: number, input: Partial<{ title: string; content: string; if_updated_at: string }>) {
   return apiFetch<ProjectPage>(`/projects/${projectId}/pages/${pageId}`, {
     method: 'PATCH',
     body: input,

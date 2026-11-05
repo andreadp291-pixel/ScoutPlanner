@@ -1,3 +1,5 @@
+import { ConflictBanner } from '../components/ConflictBanner'
+import { isConflict, useEditBase } from '../lib/useEditBase'
 import { ActivityAssignees } from '../components/ActivityAssignees'
 import { NoAccess } from '../components/NoAccess'
 import { Comments } from '../components/Comments'
@@ -35,27 +37,29 @@ export function ActivityDescription() {
   const projectQuery = useQuery({ queryKey: ['project', id], queryFn: () => getProject(id) })
   const groupsQuery = useQuery({ queryKey: ['groups', id], queryFn: () => listGroups(id) })
 
-  const saveMutation = useMutation({
-    mutationFn: (content: ActivityDoc) =>
-      updateActivity(id, actId, { description: JSON.stringify(content) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activity', id, actId] })
-      queryClient.invalidateQueries({ queryKey: ['activities', id] })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    },
-    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
-  })
+  const dirty = pendingContent !== null || materials !== null
+  const { base, setBase, conflict } = useEditBase(activityQuery.data?.updated_at, dirty)
 
-  const saveMaterialsMutation = useMutation({
-    mutationFn: (value: string) => updateActivity(id, actId, { materials: value }),
-    onSuccess: () => {
+  // descrizione e materiali partono insieme, con la versione su cui ho lavorato
+  const saveMutation = useMutation({
+    mutationFn: (v: { force?: boolean }) =>
+      updateActivity(id, actId, {
+        ...(pendingContent ? { description: JSON.stringify(pendingContent) } : {}),
+        ...(materials !== null ? { materials } : {}),
+        ...(v.force || base === null ? {} : { if_updated_at: base }),
+      }),
+    onSuccess: (a) => {
+      setBase(a.updated_at)
       queryClient.invalidateQueries({ queryKey: ['activity', id, actId] })
       queryClient.invalidateQueries({ queryKey: ['activities', id] })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     },
-    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
+    onError: (err) => {
+      if (isConflict(err)) {
+        if (window.confirm(`${err.message}.\n\nSovrascrivere con le tue modifiche? (Annulla per tenere la loro versione.)`)) saveMutation.mutate({ force: true })
+      } else alert(err instanceof Error ? err.message : 'Errore durante il salvataggio')
+    },
   })
 
   if (activityQuery.isLoading) return <Spinner label="Caricamento attività..." />
@@ -83,6 +87,15 @@ export function ActivityDescription() {
       <p className="muted" style={{ marginBottom: 20 }}>
         {activity.start_at.slice(0, 10)} · {activity.start_at.slice(11, 16)}–{activity.end_at.slice(11, 16)}
       </p>
+      {conflict && (
+        <ConflictBanner
+          what="questa attività"
+          onReload={() => {
+            setPendingContent(null)
+            setMaterials(null)
+          }}
+        />
+      )}
       <ActivityAssignees projectId={id} activity={activity} />
 
       {canEdit && (
@@ -132,16 +145,10 @@ export function ActivityDescription() {
           <button
             type="button"
             className="primary"
-            onClick={() => {
-              if (pendingContent) saveMutation.mutate(pendingContent)
-              if (materials !== null) saveMaterialsMutation.mutate(materials)
-            }}
-            disabled={
-              (saveMutation.isPending || saveMaterialsMutation.isPending) ||
-              (!pendingContent && materials === null)
-            }
+            onClick={() => saveMutation.mutate({})}
+            disabled={saveMutation.isPending || !dirty}
           >
-            {saveMutation.isPending || saveMaterialsMutation.isPending ? 'Salvataggio...' : 'Salva'}
+            {saveMutation.isPending ? 'Salvataggio...' : 'Salva'}
           </button>
           {saved && <span className="muted">Salvato ✓</span>}
         </div>

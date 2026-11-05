@@ -22,6 +22,8 @@ const VERBS: Record<HistoryEntry['action'], string> = {
   delete: 'ha eliminato',
   restore: 'ha ripristinato',
   purge: 'ha eliminato per sempre',
+  comment: 'ha commentato',
+  assign: 'ha assegnato',
 }
 
 // Cronologia delle modifiche (con ripristino della versione precedente) e cestino a 30 giorni.

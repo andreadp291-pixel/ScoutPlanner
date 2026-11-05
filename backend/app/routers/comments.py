@@ -2,6 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from ..db import get_conn
 from ..deps import ROLE_RANK, Actor, require_project_role
+from .history import log_change
 from ..notify import notify, project_url, ref_contacts
 from ..schemas import CommentCreateIn, CommentOut, CommentResolveIn
 
@@ -44,6 +45,7 @@ def add_comment(
             (actor.project_id, body.entity, body.entity_id, body.parent_id, actor.name, actor.ref, body.body.strip()),
         )
         row = conn.execute("SELECT * FROM comments WHERE id = ?", (cur.lastrowid,)).fetchone()
+        log_change(conn, actor, body.entity, body.entity_id, "comment", target["title"], body.body.strip()[:120])
         # avvisati: il proprietario, i responsabili dell'attività, chi ha scritto il commento a cui si risponde
         refs = {"o"}
         if body.entity == "activity":

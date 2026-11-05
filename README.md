@@ -12,7 +12,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003b57?style=flat-square&logo=sqlite&logoColor=white)
-![Raspberry Pi](https://img.shields.io/badge/Raspberry_Pi-c51a4a?style=flat-square&logo=raspberrypi&logoColor=white)
+![Self-hosted](https://img.shields.io/badge/self--hosted-2c6a4a?style=flat-square)
 
 **Il vademecum del campo, scritto insieme.**
 Orari al minuto, materiali, mappe e contatti in un solo posto, per tutta la comunità capi.
@@ -26,11 +26,16 @@ Orari al minuto, materiali, mappe e contatti in un solo posto, per tutta la comu
 | | |
 |---|---|
 | 📅 **Calendario** | Attività con orari a precisione di 1 minuto, categorie e colori. Si trascinano, si ridimensionano, si scambiano. |
-| 👥 **Gruppi e persone** | Gruppi (squadriglie, branchi…) e assegnazione delle attività alle persone del progetto, con filtro «solo le mie». |
+| 👥 **Gruppi e persone** | Gruppi (squadriglie, branchi…), assegnazione delle attività alle persone del progetto, «solo le mie» e stato *fatta / da fare* per ognuno. |
 | 🧰 **Materiali** | Lista unica generata dai materiali delle attività, con chi li procura e chi li trasporta. |
 | 🗺️ **Mappe e GPX** | Luogo del campo, punti di interesse (ospedale, farmacia, vigili del fuoco…) e tracce GPX con profilo altimetrico. |
 | 📝 **Pagine** | Pagine libere a blocchi: titoli, testo, tabelle, immagini, percorsi e tempi di viaggio. |
-| 🔗 **Condivisione** | Inviti con email e password personale, oppure link anonimi, con ruolo *editor* o *sola lettura*. |
+| 💬 **Commenti** | Discussioni su attività e pagine, con risposte e «segna come risolto». |
+| 🔗 **Condivisione** | Inviti con email, oppure link anonimi con scadenza. Ruoli *editor*, *commentatore* e *sola lettura*, cambiabili in ogni momento. |
+| 🙋 **Accessi** | Chi apre un progetto senza permessi può chiedere l'accesso; il proprietario approva scegliendo il ruolo. Il progetto si può cedere a un'altra persona. |
+| 🕓 **Cronologia e cestino** | Chi ha cambiato cosa e quando, con ripristino della versione precedente. Le cose eliminate restano nel cestino 30 giorni. |
+| 🔔 **Novità in tempo reale** | Campanella con le modifiche degli altri, «chi c'è adesso» nel progetto, dati che si aggiornano da soli e avviso se qualcuno modifica ciò che stai scrivendo, per non sovrascrivere il suo lavoro. |
+| ✉️ **Email** | Avvisi quando ti assegnano o cambia un'attività e quando arriva un commento. Prima del campo, promemoria «ti mancano da compilare…» con i link. Ognuno può spegnerli. Durante il campo non parte nessuna email automatica. |
 | 🔑 **Accesso** | Link magico via email, password, oppure **Continua con Google**. |
 | 📱 **Telefono** | Un giorno per volta a tutta larghezza, barra di schede in basso, finestre che salgono dal basso. Pensato per consultarlo sul campo. |
 | 🌙 **Tema scuro** | Chiaro e scuro, con le curve di livello nello sfondo. |
@@ -58,14 +63,15 @@ Orari al minuto, materiali, mappe e contatti in un solo posto, per tutta la comu
 ```
 ScoutPlanner
 ├── frontend/   React 19 + Vite + TanStack Query + zustand   → GitHub Pages
-├── backend/    FastAPI + SQLite                            → Raspberry Pi (systemd + Tailscale Funnel)
+├── backend/    FastAPI + SQLite                            → un tuo server (systemd)
 ├── docs/       guide e immagini
 └── tools/      strumenti di prova (es. GPX)
 ```
 
 - **Sessioni:** token firmati (itsdangerous), password con argon2, link di condivisione salvati come hash.
 - **Frontend:** `HashRouter`, nessun server da configurare lato Pages.
-- **Backend:** database SQLite in un file, nessun servizio esterno obbligatorio.
+- **Backend:** database SQLite in un file, nessun servizio esterno obbligatorio. Le email usano un account SMTP a scelta.
+- **Tempo reale:** controllo periodico del server (ogni 10-12 secondi), senza connessioni sempre aperte.
 
 ## 🚀 Provalo in locale
 
@@ -97,8 +103,8 @@ cd backend && pytest
 
 ## 📦 Deploy
 
-- **Frontend:** a ogni push su `main` che tocca `frontend/` parte il workflow *deploy-frontend* e pubblica su GitHub Pages.
-- **Backend:** vedi [docs/deployment.md](docs/deployment.md) (Raspberry Pi, systemd, Tailscale Funnel).
+- **Frontend:** a ogni push su `main` che tocca `frontend/` parte il workflow *deploy-frontend* e pubblica su GitHub Pages. L'indirizzo dell'API si imposta in `frontend/.env.production` (`VITE_API_BASE`).
+- **Backend:** su un qualsiasi server Linux con systemd, vedi [docs/deployment.md](docs/deployment.md).
 
 ---
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
 from ..deps import Actor, require_project_role
-from .history import FIELD_LABELS, log_change
+from .history import FIELD_LABELS, last_editor, log_change
 from ..schemas import PageCreateIn, PageOut, PageUpdateIn
 
 router = APIRouter(prefix="/projects/{project_id}/pages", tags=["project_pages"])
@@ -54,6 +54,9 @@ def update_page(page_id: int, body: PageUpdateIn, actor: Actor = Depends(require
         if not current:
             raise HTTPException(404, "Pagina non trovata")
         fields = body.model_dump(exclude_unset=True)
+        expected = fields.pop("if_updated_at", None)
+        if expected is not None and current["updated_at"] != expected:
+            raise HTTPException(409, f"Modifica in conflitto: {last_editor(conn, actor.project_id, 'page', page_id)} l'ha cambiata nel frattempo")
         changed = [k for k, v in fields.items() if current[k] != v]
         if changed:
             log_change(conn, actor, "page", page_id, "update", current["title"],

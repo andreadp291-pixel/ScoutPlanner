@@ -4,7 +4,7 @@ export interface HistoryEntry {
   id: number
   entity: 'activity' | 'page'
   entity_id: number
-  action: 'create' | 'update' | 'delete' | 'restore' | 'purge'
+  action: 'create' | 'update' | 'delete' | 'restore' | 'purge' | 'comment' | 'assign'
   actor: string
   title: string
   summary: string

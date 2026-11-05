@@ -3,7 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from ..db import get_conn
 from ..deps import ROLE_RANK, Actor, require_project_role
 from ..notify import notify, project_url, ref_contacts, when_text
-from .history import FIELD_LABELS, log_change
+from .history import FIELD_LABELS, last_editor, log_change
 from .people import project_people
 from ..schemas import ActivityCreateIn, ActivityDoneIn, ActivityOut, ActivitySwapIn, ActivityUpdateIn
 
@@ -74,6 +74,9 @@ def _set_activity_assignees(conn, project_id: int, activity_id: int, refs: list[
 
 
 def _notify_assigned(conn, background, actor: Actor, row, refs: list[str]) -> None:
+    for ref in refs:
+        if ref != actor.ref:  # voce per la campanella di quella persona
+            log_change(conn, actor, "activity", row["id"], "assign", row["title"], "ti ha assegnato questa attività", for_ref=ref)
     contacts = ref_contacts(conn, actor.project_id, [r for r in refs if r != actor.ref])
     project = conn.execute("SELECT name FROM projects WHERE id = ?", (actor.project_id,)).fetchone()
     notify(
@@ -179,6 +182,7 @@ def update_activity(
     actor: Actor = Depends(require_project_role("editor")),
 ):
     fields = body.model_dump(exclude_unset=True)
+    expected = fields.pop("if_updated_at", None)
     group_ids = fields.pop("group_ids", None)
     assignees = fields.pop("assignees", None)
     with get_conn() as conn:
@@ -187,6 +191,9 @@ def update_activity(
         ).fetchone()
         if not current:
             raise HTTPException(404, "Attività non trovata")
+        # shortcut: updated_at ha la precisione del secondo; due modifiche nello stesso secondo non si distinguono
+        if expected is not None and current["updated_at"] != expected:
+            raise HTTPException(409, f"Modifica in conflitto: {last_editor(conn, actor.project_id, 'activity', activity_id)} l'ha cambiata nel frattempo")
         if "start_at" in fields or "end_at" in fields:
             new_start = fields.get("start_at", current["start_at"])
             new_end = fields.get("end_at", current["end_at"])

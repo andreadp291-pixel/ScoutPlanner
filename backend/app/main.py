@@ -16,6 +16,7 @@ from .routers import (
     comments,
     groups,
     history,
+    live,
     materials,
     me,
     members,
@@ -69,6 +70,7 @@ app.include_router(history.router)
 app.include_router(comments.router)
 app.include_router(access.router)
 app.include_router(reports.router)
+app.include_router(live.router)
 
 
 @app.get("/health")
