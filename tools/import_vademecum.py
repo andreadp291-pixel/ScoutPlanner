@@ -32,6 +32,57 @@ COLORS = [  # per parole chiave nel titolo: pasti, fuoco, spiritualità, ...
 ]
 
 
+OWNER_NAME = "Andrea"  # chi usa lo strumento: diventa il proprietario ('o'); gli altri, persone con link
+NAMES = ["Stefano S", "Stefano G", "Don Davide", "Andrea", "Silvia", "Giovanna", "Antonio", "Alice", "Cambu", "Arianna", "Vittoria"]
+ALIASES = {"Stef G": "Stefano G"}
+
+
+def _name_re(n: str) -> str:
+    return rf"(?<!\w){re.escape(n)}(?!\w)"
+
+
+def split_chi(chi: str) -> tuple[list[str], str]:
+    """«Stefano S Silvia» -> (['Stefano S', 'Silvia'], ''): i nomi noti diventano responsabili, il resto (Staff, CdA...) resta testo."""
+    text = chi.replace("Stefano G.", "Stefano G")
+    found = sorted((m.start(), n) for n in NAMES for m in re.finditer(_name_re(n), text))
+    names = list(dict.fromkeys(n for _, n in found))
+    rest = text
+    for n in names:
+        rest = re.sub(_name_re(n), " ", rest)
+    parts = [w.strip() for w in re.split(r"\n|,|\be\b", rest) if w.strip()]
+    return names, ", ".join(parts)
+
+
+def _words(s: str) -> set[str]:
+    return {w for w in re.findall(r"[a-zà-ù0-9]+", s.casefold()) if len(w) >= 4}
+
+
+def _one_person(text: str) -> str | None:
+    names = split_chi(ALIASES.get(text.strip(), text))[0]
+    return names[0] if len(names) == 1 else None  # più persone: l'app ne accetta una sola, si lascia vuoto
+
+
+def match_materials(pages, activities) -> list[dict]:
+    """«Materiali generale» (materiale | chi lo procura | chi lo trasporta) -> assegnazioni sulle voci scritte nelle attività."""
+    table = next((b[1] for pg in pages if pg["title"].lower().startswith("materiali") for b in pg["items"] if b[0] == "table"), [])
+    seen: dict[str, str] = {}
+    for a in activities:
+        for name in [x.strip() for x in re.split(r"[\n,;]+", a["materials"]) if x.strip()]:
+            seen.setdefault(name.casefold(), name)
+    out: dict[str, dict] = {}
+    for row in table[1:]:
+        gname, procure, transport = (row + ["", ""])[:3]
+        p, t = _one_person(procure), _one_person(transport)
+        if not (p or t):
+            continue
+        gw = _words(gname)
+        for key, name in seen.items():
+            w = _words(name)
+            if key == gname.casefold() or (w and gw and (w <= gw or gw <= w)):
+                out[key] = {"name": name, "procure": p, "transport": t}
+    return list(out.values())
+
+
 def bid() -> str:
     return secrets.token_hex(4)
 
@@ -188,14 +239,13 @@ def build(path: str) -> dict:
     for date in sorted(days):
         d = days[date]
         for a in d["acts"]:
-            items = []
-            if a["chi"]:
-                items.append(("text", "Chi: " + re.sub(r"\s*\n\s*", ", ", a["chi"])))
+            names, rest = split_chi(a["chi"])
+            items = [("text", f"Chi: {rest}")] if rest else []
             items += [("text", e) for e in a["extra"]]
             for det in d["details"]:
                 if det["at"] == a["start"]:
                     items += det["items"]
-            activities.append({"date": date, **{k: a[k] for k in ("title", "start", "end", "materials")}, "items": items})
+            activities.append({"date": date, **{k: a[k] for k in ("title", "start", "end", "materials")}, "items": items, "names": names})
         # sezioni senza ora (es. «Preparazione alla partenza»): sulla prima attività del giorno con un titolo
         for det in d["details"]:
             if det["at"] is None and activities:
@@ -210,6 +260,7 @@ def build(path: str) -> dict:
     for pg in pages:
         if pg["title"].lower().startswith("sestigl"):
             groups = [t for k, t in pg["items"] if k == "title"]
+    materials = match_materials(pages, activities)
     return {
         "name": project["subtitle"] or project["name"],
         "start_date": dates[0],
@@ -222,33 +273,18 @@ def build(path: str) -> dict:
                 "end_at": f"{a['date']}T{hhmm(a['end'])}",
                 "color": color_for(a["title"]),
                 "materials": re.sub(r"\s*\n\s*", ", ", a["materials"]),
+                "assignee_names": a["names"],
                 "description": json.dumps({"blocks": text_blocks(a["items"])}, ensure_ascii=False) if a["items"] else "",
             }
             for a in activities
         ],
+        "owner_name": OWNER_NAME,
+        "people": sorted(
+            ({n for a in activities for n in a["names"]} | {n for m in materials for n in (m["procure"], m["transport"]) if n}) - {OWNER_NAME}
+        ),
+        "materials": materials,
         "pages": [{"title": pg["title"], "content": json.dumps({"blocks": text_blocks(pg["items"])}, ensure_ascii=False)} for pg in pages],
     }
-
-
-def load(plan: dict, api: str, token: str) -> int:
-    import urllib.request
-
-    def call(method: str, path: str, body=None):
-        req = urllib.request.Request(
-            api.rstrip("/") + path, method=method, data=json.dumps(body).encode() if body is not None else None,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req) as r:
-            return json.loads(r.read() or "null")
-
-    pid = call("POST", "/projects", {"name": plan["name"], "start_date": plan["start_date"], "end_date": plan["end_date"]})["id"]
-    for g in plan["groups"]:
-        call("POST", f"/projects/{pid}/groups", {"name": g})
-    for a in plan["activities"]:
-        call("POST", f"/projects/{pid}/activities", {"category": "attivita", **a})
-    for pg in plan["pages"]:
-        call("POST", f"/projects/{pid}/pages", pg)
-    return pid
 
 
 if __name__ == "__main__":
@@ -263,4 +299,6 @@ if __name__ == "__main__":
     if a.json:
         open(a.json, "w", encoding="utf8").write(json.dumps(plan, ensure_ascii=False, indent=1))
     if a.api:
+        from vademecum_load import load
+
         print("creato progetto", load(plan, a.api, a.token), file=sys.stderr)
