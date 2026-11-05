@@ -1,12 +1,14 @@
+import type { Role } from '../lib/roles'
 import { apiFetch } from './client'
 
 export interface ProjectToken {
   id: number
   person_name: string
-  role: 'editor' | 'viewer'
+  role: Role
   revoked_at: string | null
   created_at: string
   last_used_at: string | null
+  expires_at: string | null
 }
 
 export interface ProjectTokenCreated extends ProjectToken {
@@ -17,7 +19,7 @@ export function listTokens(projectId: number) {
   return apiFetch<ProjectToken[]>(`/projects/${projectId}/tokens`, { projectId })
 }
 
-export function createToken(projectId: number, input: { person_name: string; role: 'editor' | 'viewer' }) {
+export function createToken(projectId: number, input: { person_name: string; role: Role; expires_in_days?: number }) {
   return apiFetch<ProjectTokenCreated>(`/projects/${projectId}/tokens`, {
     method: 'POST',
     body: input,
@@ -34,4 +36,8 @@ export function regenerateToken(projectId: number, tokenId: number) {
 
 export function revokeToken(projectId: number, tokenId: number) {
   return apiFetch<void>(`/projects/${projectId}/tokens/${tokenId}`, { method: 'DELETE', projectId })
+}
+
+export function updateToken(projectId: number, tokenId: number, input: { role?: Role; expires_in_days?: number; no_expiry?: boolean }) {
+  return apiFetch<ProjectToken>(`/projects/${projectId}/tokens/${tokenId}`, { method: 'PATCH', body: input, projectId })
 }

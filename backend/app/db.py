@@ -36,10 +36,11 @@ CREATE TABLE IF NOT EXISTS project_tokens (
     token_hash    TEXT NOT NULL UNIQUE,
     person_name   TEXT NOT NULL,
     email         TEXT,
-    role          TEXT NOT NULL CHECK (role IN ('editor','viewer')),
+    role          TEXT NOT NULL CHECK (role IN ('editor','viewer','commenter')),
     revoked_at    TEXT,
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-    last_used_at  TEXT
+    last_used_at  TEXT,
+    expires_at    TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_project_tokens_project_id ON project_tokens(project_id);
 
@@ -58,7 +59,7 @@ CREATE TABLE IF NOT EXISTS project_members (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     member_id     INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
-    role          TEXT NOT NULL CHECK (role IN ('editor','viewer')),
+    role          TEXT NOT NULL CHECK (role IN ('editor','viewer','commenter')),
     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (project_id, member_id)
 );
@@ -160,6 +161,33 @@ CREATE TABLE IF NOT EXISTS activity_log (
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_activity_log_project ON activity_log(project_id, id);
+
+-- Commenti sulle attività e sulle pagine, con risposte (parent_id) e stato "risolto".
+CREATE TABLE IF NOT EXISTS comments (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    entity        TEXT NOT NULL CHECK (entity IN ('activity','page')),
+    entity_id     INTEGER NOT NULL,
+    parent_id     INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+    author        TEXT NOT NULL,
+    author_ref    TEXT NOT NULL,
+    body          TEXT NOT NULL,
+    resolved_at   TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_comments_entity ON comments(project_id, entity, entity_id);
+
+-- Chi non ha accesso a un progetto può chiederlo; l'owner approva (e sceglie il ruolo) o rifiuta.
+CREATE TABLE IF NOT EXISTS access_requests (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    email         TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    message       TEXT NOT NULL DEFAULT '',
+    status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_access_requests_project ON access_requests(project_id, status);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.
@@ -167,19 +195,43 @@ MIGRATIONS = [
     "ALTER TABLE project_tokens ADD COLUMN email TEXT",
     "ALTER TABLE activities ADD COLUMN materials TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE project_pois ADD COLUMN hours TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE project_tokens ADD COLUMN expires_at TEXT",
     "ALTER TABLE activities ADD COLUMN deleted_at TEXT",  # cestino
     "ALTER TABLE project_pages ADD COLUMN deleted_at TEXT",
 ]
 
 
+_ROLE_TABLES = ("project_tokens", "project_members")
+
+
 def init_db() -> None:
     with get_conn() as conn:
+        # SQLite non permette di cambiare un CHECK: nei DB creati prima del ruolo "commenter"
+        # le due tabelle si ricreano e si ricopiano i dati (stesse colonne, stesso id).
+        old = []
+        for t in _ROLE_TABLES:
+            row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (t,)).fetchone()
+            if row and "'commenter'" not in row["sql"]:
+                conn.execute("PRAGMA foreign_keys = OFF")
+                conn.execute(f"ALTER TABLE {t} RENAME TO {t}_old")
+                conn.execute(f"DROP INDEX IF EXISTS idx_{t}_project_id")
+                conn.execute(f"DROP INDEX IF EXISTS idx_project_members_project")
+                conn.execute(f"DROP INDEX IF EXISTS idx_project_members_member")
+                old.append(t)
         conn.executescript(SCHEMA)
         for migration in MIGRATIONS:
             try:
                 conn.execute(migration)
             except sqlite3.OperationalError:
                 pass  # colonna già presente
+        for t in old:
+            cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({t})")]
+            old_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({t}_old)")}
+            shared = ", ".join(c for c in cols if c in old_cols)
+            conn.execute(f"INSERT INTO {t} ({shared}) SELECT {shared} FROM {t}_old")
+            conn.execute(f"DROP TABLE {t}_old")
+        if old:
+            conn.execute("PRAGMA foreign_keys = ON")
 
 
 @contextmanager

@@ -1,3 +1,6 @@
+import { NoAccess } from '../components/NoAccess'
+import { Comments } from '../components/Comments'
+import { canEditRole } from '../lib/roles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -56,11 +59,11 @@ export function ActivityDescription() {
 
   if (activityQuery.isLoading) return <Spinner label="Caricamento attività..." />
   if (activityQuery.error || !activityQuery.data) {
-    return <p role="alert">Attività non trovata o accesso negato</p>
+    return <NoAccess projectId={id} what="Attività" />
   }
 
   const activity = activityQuery.data
-  const canEdit = (accessQuery.data ? accessQuery.data.role !== 'viewer' : false) && globalMode === 'edit'
+  const canEdit = (canEditRole(accessQuery.data?.role)) && globalMode === 'edit'
   const currentContent = pendingContent ?? parseActivityDoc(activity.description)
   const currentMaterials = materials ?? activity.materials
   const presetDays = projectQuery.data
@@ -141,6 +144,7 @@ export function ActivityDescription() {
           {saved && <span className="muted">Salvato ✓</span>}
         </div>
       )}
+      <Comments projectId={id} entity="activity" entityId={activity.id} />
     </div>
   )
 }

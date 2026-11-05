@@ -1,3 +1,5 @@
+import { when } from '../lib/when'
+import { canEditRole } from '../lib/roles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import {
@@ -22,10 +24,6 @@ const VERBS: Record<HistoryEntry['action'], string> = {
   purge: 'ha eliminato per sempre',
 }
 
-// il server dà l'ora UTC senza fuso: "2026-07-01 09:00:00"
-const when = (s: string) =>
-  new Date(s.replace(' ', 'T') + 'Z').toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-
 // Cronologia delle modifiche (con ripristino della versione precedente) e cestino a 30 giorni.
 export function ProjectHistory() {
   const id = Number(useParams().projectId)
@@ -33,7 +31,7 @@ export function ProjectHistory() {
   const historyQuery = useQuery({ queryKey: ['history', id], queryFn: () => listHistory(id) })
   const trashQuery = useQuery({ queryKey: ['trash', id], queryFn: () => listTrash(id) })
   const accessQuery = useQuery({ queryKey: ['access', id], queryFn: () => getProjectAccess(id) })
-  const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
+  const canEdit = canEditRole(accessQuery.data?.role)
 
   const refresh = () => {
     for (const k of ['history', 'trash', 'activities', 'pages', 'materials']) queryClient.invalidateQueries({ queryKey: [k, id] })

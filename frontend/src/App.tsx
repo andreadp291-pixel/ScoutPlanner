@@ -1,3 +1,4 @@
+import { ApiError } from './api/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuthStore } from './state/authStore'
@@ -21,7 +22,10 @@ import { ProjectList } from './routes/ProjectList'
 import { ProjectPageEditor } from './routes/ProjectPageEditor'
 import { ProjectTokens } from './routes/ProjectTokens'
 
-const queryClient = new QueryClient()
+// niente nuovi tentativi per 401/403/404: non cambierebbero e farebbero aspettare a vuoto
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: (n, err) => !(err instanceof ApiError && err.status < 500) && n < 2 } },
+})
 
 const PASSWORD_CHANGE_EXEMPT_PATHS = ['/member/change-password', '/login', '/', '/auth/callback']
 

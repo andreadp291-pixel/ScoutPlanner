@@ -1,3 +1,4 @@
+import { NoAccess } from '../components/NoAccess'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -56,7 +57,7 @@ export function ProjectView() {
   })
 
   if (projectQuery.isLoading) return <Spinner label="Caricamento progetto..." />
-  if (projectQuery.error || !projectQuery.data) return <p role="alert">Progetto non trovato o accesso negato</p>
+  if (projectQuery.error || !projectQuery.data) return <NoAccess projectId={id} />
 
   const project = projectQuery.data
   const myRef = accessQuery.data?.ref

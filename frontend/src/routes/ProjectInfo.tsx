@@ -1,3 +1,4 @@
+import { canEditRole } from '../lib/roles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -42,7 +43,7 @@ export function ProjectInfo() {
   const poisQuery = useQuery({ queryKey: ['pois', id], queryFn: () => listPois(id) })
   const pagesQuery = useQuery({ queryKey: ['pages', id], queryFn: () => listPages(id) })
 
-  const canEdit = (accessQuery.data ? accessQuery.data.role !== 'viewer' : false) && globalMode === 'edit'
+  const canEdit = (canEditRole(accessQuery.data?.role)) && globalMode === 'edit'
 
   const setLocationMutation = useMutation({
     mutationFn: (picked: PickedLocation) => setLocation(id, picked),

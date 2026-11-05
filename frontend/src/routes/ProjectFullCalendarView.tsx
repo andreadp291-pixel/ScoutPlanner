@@ -1,3 +1,4 @@
+import { NoAccess } from '../components/NoAccess'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -30,7 +31,7 @@ export function ProjectFullCalendarView() {
   })
 
   if (projectQuery.isLoading) return <Spinner label="Caricamento progetto..." />
-  if (projectQuery.error || !projectQuery.data) return <p role="alert">Progetto non trovato o accesso negato</p>
+  if (projectQuery.error || !projectQuery.data) return <NoAccess projectId={id} />
 
   const project = projectQuery.data
 

@@ -139,7 +139,14 @@ class ActivityOut(BaseModel):
 
 class TokenCreateIn(BaseModel):
     person_name: str = Field(min_length=1, max_length=100)
-    role: str = Field(pattern="^(editor|viewer)$")
+    role: str = Field(pattern="^(editor|commenter|viewer)$")
+    expires_in_days: int | None = Field(default=None, ge=1, le=365)  # None = non scade
+
+
+class TokenUpdateIn(BaseModel):
+    role: str | None = Field(default=None, pattern="^(editor|commenter|viewer)$")
+    expires_in_days: int | None = Field(default=None, ge=1, le=365)  # nuova scadenza, da adesso
+    no_expiry: bool = False  # toglie la scadenza
 
 
 class TokenOut(BaseModel):
@@ -149,6 +156,7 @@ class TokenOut(BaseModel):
     revoked_at: str | None
     created_at: str
     last_used_at: str | None
+    expires_at: str | None = None
 
 
 class TokenCreatedOut(TokenOut):
@@ -158,11 +166,11 @@ class TokenCreatedOut(TokenOut):
 class MemberInviteIn(BaseModel):
     person_name: str = Field(min_length=1, max_length=100)
     email: Email
-    role: str = Field(pattern="^(editor|viewer)$")
+    role: str = Field(pattern="^(editor|commenter|viewer)$")
 
 
 class MemberRoleUpdateIn(BaseModel):
-    role: str = Field(pattern="^(editor|viewer)$")
+    role: str = Field(pattern="^(editor|commenter|viewer)$")
 
 
 class MemberOut(BaseModel):
@@ -328,3 +336,48 @@ class TrashItemOut(BaseModel):
     id: int
     title: str
     deleted_at: str
+
+
+class CommentCreateIn(BaseModel):
+    entity: str = Field(pattern="^(activity|page)$")
+    entity_id: int
+    parent_id: int | None = None
+    body: str = Field(min_length=1, max_length=2000)
+
+
+class CommentResolveIn(BaseModel):
+    resolved: bool
+
+
+class CommentOut(BaseModel):
+    id: int
+    entity: str
+    entity_id: int
+    parent_id: int | None
+    author: str
+    author_ref: str
+    body: str
+    resolved_at: str | None
+    created_at: str
+
+
+class AccessRequestIn(BaseModel):
+    name: str = Field(default="", max_length=100)
+    message: str = Field(default="", max_length=500)
+
+
+class AccessRequestOut(BaseModel):
+    id: int
+    email: str
+    name: str
+    message: str
+    status: str
+    created_at: str
+
+
+class AccessApproveIn(BaseModel):
+    role: str = Field(pattern="^(editor|commenter|viewer)$")
+
+
+class TransferIn(BaseModel):
+    email: Email

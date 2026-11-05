@@ -8,8 +8,10 @@ from fastapi.staticfiles import StaticFiles
 from .config import FRONTEND_ORIGIN, UPLOADS_DIR
 from .db import init_db
 from .routers import (
+    access,
     activities,
     auth,
+    comments,
     groups,
     history,
     materials,
@@ -57,6 +59,8 @@ app.include_router(project_location.router)
 app.include_router(project_pois.router)
 app.include_router(project_pages.router)
 app.include_router(history.router)
+app.include_router(comments.router)
+app.include_router(access.router)
 
 
 @app.get("/health")

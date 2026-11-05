@@ -1,10 +1,11 @@
+import type { Role } from '../lib/roles'
 import { apiFetch } from './client'
 
 export interface ProjectMember {
   id: number
   display_name: string
   email: string
-  role: 'editor' | 'viewer'
+  role: Role
   must_change_password: boolean
   created_at: string
 }
@@ -15,7 +16,7 @@ export function listMembers(projectId: number) {
 
 export function inviteMember(
   projectId: number,
-  input: { person_name: string; email: string; role: 'editor' | 'viewer' },
+  input: { person_name: string; email: string; role: Role },
 ) {
   return apiFetch<ProjectMember>(`/projects/${projectId}/members`, {
     method: 'POST',
@@ -24,7 +25,7 @@ export function inviteMember(
   })
 }
 
-export function updateMemberRole(projectId: number, projectMemberId: number, role: 'editor' | 'viewer') {
+export function updateMemberRole(projectId: number, projectMemberId: number, role: Role) {
   return apiFetch<ProjectMember>(`/projects/${projectId}/members/${projectMemberId}`, {
     method: 'PATCH',
     body: { role },

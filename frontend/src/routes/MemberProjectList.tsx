@@ -1,3 +1,4 @@
+import { ROLE_LABELS } from '../lib/roles'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getMyProjects } from '../api/me'
@@ -20,7 +21,7 @@ export function MemberProjectList() {
               {p.name}
               <div className="dates">
                 {formatShortDate(p.start_date)} → {formatShortDate(p.end_date)} ·{' '}
-                {p.role === 'editor' ? 'Editor' : 'Sola lettura'}
+                {ROLE_LABELS[p.role]}
               </div>
             </Link>
           </li>

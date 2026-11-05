@@ -26,45 +26,43 @@ def list_members(actor: Actor = Depends(require_project_role("owner"))):
     return [dict(r) for r in rows]
 
 
+def add_member(conn, project_id: int, project_name: str, email: str, name: str, role: str) -> int:
+    """Aggiunge (o aggiorna il ruolo di) una persona con account e le scrive. Restituisce project_members.id."""
+    existing_member = conn.execute(
+        "SELECT id, display_name, must_change_password FROM members WHERE email = ?", (email,)
+    ).fetchone()
+
+    if existing_member is None:
+        temp_password = generate_temp_password()
+        cur = conn.execute(
+            "INSERT INTO members (email, display_name, password_hash) VALUES (?, ?, ?)",
+            (email, name, ph.hash(temp_password)),
+        )
+        member_id = cur.lastrowid
+        sent = send_member_invite_email(email, name, project_name, temp_password)
+    else:
+        member_id = existing_member["id"]
+        sent = send_member_added_to_project_email(email, existing_member["display_name"], project_name)
+    if not sent:
+        # L'eccezione annulla la transazione: niente membro creato con una password mai arrivata.
+        raise HTTPException(status_code=502, detail="Invio email fallito, riprova più tardi")
+
+    link = conn.execute(
+        "SELECT id FROM project_members WHERE project_id = ? AND member_id = ?", (project_id, member_id)
+    ).fetchone()
+    if link is not None:
+        conn.execute("UPDATE project_members SET role = ? WHERE id = ?", (role, link["id"]))
+        return link["id"]
+    return conn.execute(
+        "INSERT INTO project_members (project_id, member_id, role) VALUES (?, ?, ?)", (project_id, member_id, role)
+    ).lastrowid
+
+
 @router.post("", response_model=MemberOut, status_code=201)
 def invite_member(body: MemberInviteIn, actor: Actor = Depends(require_project_role("owner"))):
     with get_conn() as conn:
         project = conn.execute("SELECT name FROM projects WHERE id = ?", (actor.project_id,)).fetchone()
-
-        existing_member = conn.execute(
-            "SELECT id, display_name, must_change_password FROM members WHERE email = ?", (body.email,)
-        ).fetchone()
-
-        if existing_member is None:
-            temp_password = generate_temp_password()
-            password_hash = ph.hash(temp_password)
-            cur = conn.execute(
-                "INSERT INTO members (email, display_name, password_hash) VALUES (?, ?, ?)",
-                (body.email, body.person_name, password_hash),
-            )
-            member_id = cur.lastrowid
-            sent = send_member_invite_email(body.email, body.person_name, project["name"], temp_password)
-        else:
-            member_id = existing_member["id"]
-            sent = send_member_added_to_project_email(body.email, existing_member["display_name"], project["name"])
-        if not sent:
-            # L'eccezione annulla la transazione: niente membro creato con una password mai arrivata.
-            raise HTTPException(status_code=502, detail="Invio email fallito, riprova più tardi")
-
-        existing_link = conn.execute(
-            "SELECT id FROM project_members WHERE project_id = ? AND member_id = ?",
-            (actor.project_id, member_id),
-        ).fetchone()
-        if existing_link is not None:
-            conn.execute("UPDATE project_members SET role = ? WHERE id = ?", (body.role, existing_link["id"]))
-            project_member_id = existing_link["id"]
-        else:
-            cur = conn.execute(
-                "INSERT INTO project_members (project_id, member_id, role) VALUES (?, ?, ?)",
-                (actor.project_id, member_id, body.role),
-            )
-            project_member_id = cur.lastrowid
-
+        project_member_id = add_member(conn, actor.project_id, project["name"], body.email, body.person_name, body.role)
         row = conn.execute(
             f"""SELECT {MEMBER_FIELDS} FROM project_members pm
                 JOIN members m ON m.id = pm.member_id

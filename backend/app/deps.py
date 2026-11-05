@@ -6,7 +6,7 @@ from .config import MEMBER_SESSION_MAX_AGE, OWNER_SESSION_MAX_AGE
 from .db import get_conn
 from .security import hash_share_token, verify_member_session_token, verify_owner_session_token
 
-ROLE_RANK = {"viewer": 0, "editor": 1, "owner": 2}
+ROLE_RANK = {"viewer": 0, "commenter": 1, "editor": 2, "owner": 3}
 
 
 @dataclass
@@ -98,11 +98,12 @@ def require_project_role(min_role: str):
                     token_hash = hash_share_token(token)
                     row = conn.execute(
                         """SELECT id, person_name, role FROM project_tokens
-                           WHERE project_id = ? AND token_hash = ? AND revoked_at IS NULL""",
+                           WHERE project_id = ? AND token_hash = ? AND revoked_at IS NULL
+                             AND (expires_at IS NULL OR expires_at > datetime('now'))""",
                         (project_id, token_hash),
                     ).fetchone()
                     if row is None:
-                        raise HTTPException(status_code=401, detail="Token non valido o revocato")
+                        raise HTTPException(status_code=401, detail="Link non valido, scaduto o revocato")
                     conn.execute(
                         "UPDATE project_tokens SET last_used_at = datetime('now') WHERE id = ?",
                         (row["id"],),

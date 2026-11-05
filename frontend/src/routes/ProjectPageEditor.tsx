@@ -1,3 +1,6 @@
+import { NoAccess } from '../components/NoAccess'
+import { Comments } from '../components/Comments'
+import { canEditRole } from '../lib/roles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -41,11 +44,11 @@ export function ProjectPageEditor() {
 
   if (pageQuery.isLoading) return <Spinner label="Caricamento pagina..." />
   if (pageQuery.error || !pageQuery.data) {
-    return <p role="alert">Pagina non trovata o accesso negato</p>
+    return <NoAccess projectId={id} what="Pagina" />
   }
 
   const page = pageQuery.data
-  const canEdit = (accessQuery.data ? accessQuery.data.role !== 'viewer' : false) && globalMode === 'edit'
+  const canEdit = (canEditRole(accessQuery.data?.role)) && globalMode === 'edit'
   const currentContent = pendingContent ?? parseActivityDoc(page.content)
   const currentTitle = title ?? page.title
   const presetDays = projectQuery.data
@@ -111,6 +114,7 @@ export function ProjectPageEditor() {
           {saved && <span className="muted">Salvato ✓</span>}
         </div>
       )}
+      <Comments projectId={id} entity="page" entityId={page.id} />
     </div>
   )
 }

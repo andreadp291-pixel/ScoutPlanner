@@ -1,3 +1,4 @@
+import { canEditRole } from '../lib/roles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -54,7 +55,7 @@ export function ProjectMaterials() {
   if (materialsQuery.error || !materialsQuery.data) return <p role="alert">Materiali non disponibili</p>
 
   const people = peopleQuery.data ?? []
-  const canEdit = accessQuery.data ? accessQuery.data.role !== 'viewer' : false
+  const canEdit = canEditRole(accessQuery.data?.role)
   const myRef = accessQuery.data?.ref
   const materials = materialsQuery.data.filter(
     (m) => !onlyMine || (myRef !== undefined && (m.procure_ref === myRef || m.transport_ref === myRef)),
