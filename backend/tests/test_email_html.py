@@ -26,8 +26,8 @@ def test_email_html_look():
 
 
 def test_email_html_background():
-    html = to_html("Oggetto", TEXT, bg_url="https://x.it/email-bg.png")
-    assert "url('https://x.it/email-bg.png')" in html and 'bgcolor="#f1f4ef"' in html  # curve di livello, con colore di riserva
+    html = to_html("Oggetto", TEXT, bg_url="https://x.it/email-map.png")
+    assert "url('https://x.it/email-map.png')" in html and 'bgcolor="#f1f4ef"' in html  # curve di livello, con colore di riserva
     assert "url(" not in to_html("Oggetto", TEXT)
 
 
@@ -54,5 +54,5 @@ def test_message_has_text_html_and_inline_logo(monkeypatch):
     msg = sent[0]
     assert msg.get_body(("plain",)).get_content().startswith("Ciao Mia,")  # chi non vede l'HTML legge il testo
     html_part = msg.get_body(("html",))
-    assert "ScoutPlanner" in html_part.get_content() and "/email-bg.png" in html_part.get_content()
+    assert "ScoutPlanner" in html_part.get_content() and "/email-map.png" in html_part.get_content()
     assert [p.get_content_type() for p in msg.walk()].count("image/png") == 1  # logo incorporato (cid)

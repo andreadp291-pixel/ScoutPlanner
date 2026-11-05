@@ -94,14 +94,15 @@ button.primary:hover:not(:disabled),
 .btn.primary:hover,
 form button[type='submit']:hover:not(:disabled) { color: var(--accent-fg); }
 
-/* sfondo a curve di livello, fermo mentre si scorre */
+/* sfondo: carta topografica di montagne (curve di livello), fermo mentre si scorre. Le piastrelle sono generate da tools/make_email_map.py */
 body {
-  background-image: repeating-radial-gradient(
-    circle at 90% 4%,
-    transparent 0 30px,
-    color-mix(in srgb, var(--accent) 9%, transparent) 31px 32px
-  );
+  background-image: url('./assets/topo-light.png');
+  background-size: 900px;
   background-attachment: fixed;
+}
+:root[data-theme='dark'] body { background-image: url('./assets/topo-dark.png'); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) body { background-image: url('./assets/topo-dark.png'); }
 }
 
 /* ---------- intestazione e navigazione ---------- */
@@ -137,7 +138,8 @@ body {
 .auth { min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr); }
 .auth-hero {
   background-color: var(--hero-bg);
-  background-image: repeating-radial-gradient(circle at 12% 92%, transparent 0 36px, color-mix(in srgb, var(--hero-fg) 8%, transparent) 37px 38px);
+  background-image: url('./assets/topo-hero.png');
+  background-size: 900px;
   color: var(--hero-fg);
   padding: 48px max(32px, env(safe-area-inset-left, 0px));
   display: flex;
