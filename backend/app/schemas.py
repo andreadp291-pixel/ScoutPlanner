@@ -309,3 +309,22 @@ class GoogleSessionOut(BaseModel):
     owner: OwnerSessionOut
     member: MemberSessionOut | None = None  # presente se l'email è di un membro invitato
     owner_projects: int  # quanti progetti ha come owner: serve a scegliere la pagina d'arrivo
+
+
+class HistoryOut(BaseModel):
+    id: int
+    entity: str  # 'activity' | 'page'
+    entity_id: int
+    action: str  # create | update | delete | restore | purge
+    actor: str
+    title: str
+    summary: str
+    created_at: str
+    restorable: bool  # c'è lo stato precedente da ripristinare
+
+
+class TrashItemOut(BaseModel):
+    entity: str
+    id: int
+    title: str
+    deleted_at: str

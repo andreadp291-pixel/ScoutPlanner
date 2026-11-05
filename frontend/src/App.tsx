@@ -14,6 +14,7 @@ import { OwnerSetPassword } from './routes/OwnerSetPassword'
 import { ProjectCreate } from './routes/ProjectCreate'
 import { ProjectFullCalendarView } from './routes/ProjectFullCalendarView'
 import { ProjectHome } from './routes/ProjectHome'
+import { ProjectHistory } from './routes/ProjectHistory'
 import { ProjectInfo } from './routes/ProjectInfo'
 import { ProjectMaterials } from './routes/ProjectMaterials'
 import { ProjectList } from './routes/ProjectList'
@@ -115,6 +116,7 @@ function App() {
                 element={<ActivityDescription />}
               />
               <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
+              <Route path="/projects/:projectId/history" element={<ProjectHistory />} />
               <Route path="/projects/:projectId/materials" element={<ProjectMaterials />} />
               <Route path="/projects/:projectId/pages/:pageId" element={<ProjectPageEditor />} />
               <Route

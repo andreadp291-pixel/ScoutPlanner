@@ -167,3 +167,39 @@ def test_verify_google_access_token_checks_audience(monkeypatch):
     assert security.verify_google_access_token("t", "altro-client") is None  # token emesso per un'altra app
     payload["email_verified"] = "false"
     assert security.verify_google_access_token("t", "cid") is None
+
+
+def test_history_trash_and_restore(client, project):
+    h, base = owner(), f"/projects/{project}"
+    aid = client.post(f"{base}/activities", json=ACT, headers=h).json()["id"]
+    client.patch(f"{base}/activities/{aid}", json={"title": "B"}, headers=h)
+    client.patch(f"{base}/activities/{aid}", json={"title": "B"}, headers=h)  # nessun cambiamento: non va nel log
+    hist = client.get(f"{base}/history", headers=h).json()
+    assert [e["action"] for e in hist] == ["update", "create"] and hist[0]["restorable"] and not hist[1]["restorable"]
+    # ripristina la versione precedente
+    assert client.post(f"{base}/history/{hist[0]['id']}/restore", headers=h).status_code == 200
+    assert client.get(f"{base}/activities/{aid}", headers=h).json()["title"] == "A"
+    # cestino: sparisce dalla lista, si recupera, si elimina per sempre
+    assert client.delete(f"{base}/activities/{aid}", headers=h).status_code == 204
+    assert client.get(f"{base}/activities", headers=h).json() == []
+    assert client.get(f"{base}/activities/{aid}", headers=h).status_code == 404
+    assert client.get(f"{base}/trash", headers=h).json()[0]["id"] == aid
+    # nel cestino non occupa l'orario
+    other = client.post(f"{base}/activities", json=ACT, headers=h).json()["id"]
+    assert client.post(f"{base}/trash/activity/{aid}/restore", headers=h).status_code == 409
+    client.delete(f"{base}/activities/{other}", headers=h)
+    assert client.post(f"{base}/trash/activity/{aid}/restore", headers=h).status_code == 200
+    assert [a["id"] for a in client.get(f"{base}/activities", headers=h).json()] == [aid]
+    client.delete(f"{base}/activities/{aid}", headers=h)
+    assert client.delete(f"{base}/trash/activity/{aid}", headers=h).status_code == 204
+    assert all(i["id"] != aid for i in client.get(f"{base}/trash", headers=h).json())
+    # pagine: stesso schema
+    pid = client.post(f"{base}/pages", json={"title": "P1", "content": "x"}, headers=h).json()["id"]
+    client.delete(f"{base}/pages/{pid}", headers=h)
+    assert client.get(f"{base}/pages", headers=h).json() == []
+    assert client.post(f"{base}/trash/page/{pid}/restore", headers=h).status_code == 200
+    # il viewer vede la cronologia ma non ripristina
+    v = client.post(f"{base}/tokens", json={"person_name": "v", "role": "viewer"}, headers=h).json()["raw_token"]
+    vh = {"Authorization": f"Bearer {v}"}
+    assert client.get(f"{base}/history", headers=vh).status_code == 200
+    assert client.post(f"{base}/trash/page/{pid}/restore", headers=vh).status_code == 403

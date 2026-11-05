@@ -11,6 +11,7 @@ from .routers import (
     activities,
     auth,
     groups,
+    history,
     materials,
     me,
     members,
@@ -26,6 +27,7 @@ from .routers import (
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
+    history.purge_trash()
     yield
 
 
@@ -54,6 +56,7 @@ app.include_router(materials.router)
 app.include_router(project_location.router)
 app.include_router(project_pois.router)
 app.include_router(project_pages.router)
+app.include_router(history.router)
 
 
 @app.get("/health")

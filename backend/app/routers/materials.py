@@ -19,7 +19,7 @@ def _items(text: str) -> list[str]:
 def list_materials(actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         acts = conn.execute(
-            "SELECT id, title, materials FROM activities WHERE project_id = ? ORDER BY start_at",
+            "SELECT id, title, materials FROM activities WHERE project_id = ? AND deleted_at IS NULL ORDER BY start_at",
             (actor.project_id,),
         ).fetchall()
         assigned = {

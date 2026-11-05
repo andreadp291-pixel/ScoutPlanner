@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
 from ..deps import Actor, require_project_role
+from .history import FIELD_LABELS, log_change
 from ..schemas import PageCreateIn, PageOut, PageUpdateIn
 
 router = APIRouter(prefix="/projects/{project_id}/pages", tags=["project_pages"])
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/projects/{project_id}/pages", tags=["project_pages"]
 def list_pages(actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM project_pages WHERE project_id = ? ORDER BY position, id", (actor.project_id,)
+            "SELECT * FROM project_pages WHERE project_id = ? AND deleted_at IS NULL ORDER BY position, id", (actor.project_id,)
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -29,6 +30,7 @@ def create_page(body: PageCreateIn, actor: Actor = Depends(require_project_role(
             (actor.project_id, body.title, body.content, next_pos, actor.name),
         )
         row = conn.execute("SELECT * FROM project_pages WHERE id = ?", (cur.lastrowid,)).fetchone()
+        log_change(conn, actor, "page", cur.lastrowid, "create", body.title)
     return dict(row)
 
 
@@ -36,7 +38,7 @@ def create_page(body: PageCreateIn, actor: Actor = Depends(require_project_role(
 def get_page(page_id: int, actor: Actor = Depends(require_project_role("viewer"))):
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT * FROM project_pages WHERE id = ? AND project_id = ?", (page_id, actor.project_id)
+            "SELECT * FROM project_pages WHERE id = ? AND project_id = ? AND deleted_at IS NULL", (page_id, actor.project_id)
         ).fetchone()
     if not row:
         raise HTTPException(404, "Pagina non trovata")
@@ -47,11 +49,15 @@ def get_page(page_id: int, actor: Actor = Depends(require_project_role("viewer")
 def update_page(page_id: int, body: PageUpdateIn, actor: Actor = Depends(require_project_role("editor"))):
     with get_conn() as conn:
         current = conn.execute(
-            "SELECT * FROM project_pages WHERE id = ? AND project_id = ?", (page_id, actor.project_id)
+            "SELECT * FROM project_pages WHERE id = ? AND project_id = ? AND deleted_at IS NULL", (page_id, actor.project_id)
         ).fetchone()
         if not current:
             raise HTTPException(404, "Pagina non trovata")
         fields = body.model_dump(exclude_unset=True)
+        changed = [k for k, v in fields.items() if current[k] != v]
+        if changed:
+            log_change(conn, actor, "page", page_id, "update", current["title"],
+                       "modificata: " + ", ".join(FIELD_LABELS[k] for k in changed), dict(current))
         if fields:
             merged = {**dict(current), **fields}
             conn.execute(
@@ -65,4 +71,9 @@ def update_page(page_id: int, body: PageUpdateIn, actor: Actor = Depends(require
 @router.delete("/{page_id}", status_code=204)
 def delete_page(page_id: int, actor: Actor = Depends(require_project_role("editor"))):
     with get_conn() as conn:
-        conn.execute("DELETE FROM project_pages WHERE id = ? AND project_id = ?", (page_id, actor.project_id))
+        row = conn.execute(
+            "SELECT * FROM project_pages WHERE id = ? AND project_id = ? AND deleted_at IS NULL", (page_id, actor.project_id)
+        ).fetchone()
+        if row:
+            conn.execute("UPDATE project_pages SET deleted_at = datetime('now') WHERE id = ?", (page_id,))
+            log_change(conn, actor, "page", page_id, "delete", row["title"], "spostata nel cestino")

@@ -145,6 +145,21 @@ CREATE TABLE IF NOT EXISTS project_pages (
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_project_pages_project_id ON project_pages(project_id);
+
+-- Cronologia delle modifiche ad attività e pagine. "before" è lo stato precedente (JSON) e serve a ripristinare.
+CREATE TABLE IF NOT EXISTS activity_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id    INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    entity        TEXT NOT NULL CHECK (entity IN ('activity','page')),
+    entity_id     INTEGER NOT NULL,
+    action        TEXT NOT NULL,
+    actor         TEXT NOT NULL,
+    title         TEXT NOT NULL,
+    summary       TEXT NOT NULL DEFAULT '',
+    before        TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_activity_log_project ON activity_log(project_id, id);
 """
 
 # Migrazioni idempotenti per DB creati prima dell'introduzione di una colonna.
@@ -152,6 +167,8 @@ MIGRATIONS = [
     "ALTER TABLE project_tokens ADD COLUMN email TEXT",
     "ALTER TABLE activities ADD COLUMN materials TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE project_pois ADD COLUMN hours TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE activities ADD COLUMN deleted_at TEXT",  # cestino
+    "ALTER TABLE project_pages ADD COLUMN deleted_at TEXT",
 ]
 
 

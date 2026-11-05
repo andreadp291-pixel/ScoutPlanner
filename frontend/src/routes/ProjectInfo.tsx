@@ -245,6 +245,14 @@ export function ProjectInfo() {
         )}
       </div>
 
+      <div className="card">
+        <h2>Cronologia e cestino</h2>
+        <p className="muted">Chi ha cambiato cosa, con ripristino delle versioni, e le cose eliminate di recente.</p>
+        <Link to={`/projects/${id}/history`} className="btn">
+          Apri
+        </Link>
+      </div>
+
       {showLocationPicker && (
         <LocationPickerModal
           onConfirm={(picked) => setLocationMutation.mutate(picked)}
