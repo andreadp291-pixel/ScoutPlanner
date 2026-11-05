@@ -10,7 +10,7 @@ import { isDocEmpty, parseActivityDoc } from '../components/editor/blocks'
 import { NoAccess } from '../components/NoAccess'
 import { Spinner } from '../components/Spinner'
 
-// Vademecum pronto da stampare: una pagina per giorno. «Salva come PDF» dal dialogo di stampa del browser.
+// Vademecum da stampare: una pagina per giorno. «Salva come PDF» dal dialogo di stampa del browser.
 export function ProjectPrint() {
   const id = Number(useParams().projectId)
   const projectQuery = useQuery({ queryKey: ['project', id], queryFn: () => getProject(id) })
