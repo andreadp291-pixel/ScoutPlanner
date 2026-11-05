@@ -241,6 +241,12 @@ export function ProjectCalendar() {
               Materiali
             </button>
           </Link>
+          <Link to={`/projects/${id}/print`}>
+            <button type="button">
+              <DownloadIcon />
+              Esporta PDF
+            </button>
+          </Link>
           <button type="button" onClick={handleExport}>
             <DownloadIcon />
             Esporta

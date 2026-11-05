@@ -15,6 +15,7 @@ import { parseActivityDoc } from '../components/editor/blocks'
 import { CalendarIcon } from '../components/icons/CalendarIcon'
 import { ChevronDownIcon } from '../components/icons/ChevronDownIcon'
 import { ChevronUpIcon } from '../components/icons/ChevronUpIcon'
+import { DownloadIcon } from '../components/icons/DownloadIcon'
 import { InfoIcon } from '../components/icons/InfoIcon'
 import { ListIcon } from '../components/icons/ListIcon'
 import { Spinner } from '../components/Spinner'
@@ -103,6 +104,11 @@ export function ProjectView() {
           <Link to={`/projects/${id}/info`}>
             <button type="button">
               <InfoIcon /> Info generali
+            </button>
+          </Link>
+          <Link to={`/projects/${id}/print`}>
+            <button type="button">
+              <DownloadIcon /> Esporta PDF
             </button>
           </Link>
           <Link to={`/projects/${id}/materials`}>

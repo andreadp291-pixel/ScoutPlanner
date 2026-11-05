@@ -310,3 +310,19 @@ button.link { background: none; border: 0; padding: 0; min-height: 0; color: var
   .bell-wrap { position: static; }
   .bell-pop { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 58px); width: auto; }
 }
+
+/* Vademecum stampabile: una pagina per giorno */
+.print-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.print-day { margin-bottom: 32px; }
+.print-act { margin: 14px 0; padding-top: 10px; border-top: 1px solid var(--line, #d9dfd6); break-inside: avoid-page; }
+.print-act h2 { font-size: 1.1rem; margin: 0 0 4px; }
+.print-time { color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.print-sub { margin-top: 0; }
+@media print {
+  .app-header, .tabbar, .print-bar, .live-bar, .presence-bar { display: none !important; }
+  body, .app-shell, .page { background: none !important; }
+  .page { padding: 0 !important; max-width: none !important; }
+  .print-day { break-after: page; margin: 0; }
+  .print-day:last-child { break-after: auto; }
+  @page { margin: 14mm; }
+}

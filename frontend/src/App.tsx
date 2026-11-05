@@ -17,6 +17,7 @@ import { ProjectFullCalendarView } from './routes/ProjectFullCalendarView'
 import { ProjectHome } from './routes/ProjectHome'
 import { EmailPrefs } from './routes/EmailPrefs'
 import { ProjectHistory } from './routes/ProjectHistory'
+import { ProjectPrint } from './routes/ProjectPrint'
 import { ProjectInfo } from './routes/ProjectInfo'
 import { ProjectMaterials } from './routes/ProjectMaterials'
 import { ProjectList } from './routes/ProjectList'
@@ -121,6 +122,7 @@ function App() {
                 path="/projects/:projectId/activities/:activityId/description"
                 element={<ActivityDescription />}
               />
+              <Route path="/projects/:projectId/print" element={<ProjectPrint />} />
               <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
               <Route path="/projects/:projectId/history" element={<ProjectHistory />} />
               <Route path="/projects/:projectId/materials" element={<ProjectMaterials />} />
