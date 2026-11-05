@@ -165,19 +165,21 @@ export function ActivityBlock({
         position: 'absolute',
         top,
         height,
-        left: 2,
-        right: 2,
-        background: activity.color,
-        borderRadius: 4,
-        padding: '2px 4px',
-        fontSize: 12,
+        left: 3,
+        right: 3,
         overflow: 'hidden',
         cursor: canEdit ? 'grab' : 'pointer',
         opacity: isLiftedElsewhere ? 0.35 : 1,
-      }}
+        ['--cc' as string]: activity.color,
+      } as React.CSSProperties}
       title={`${activity.title} (${activity.start_at.slice(11)}–${activity.end_at.slice(11)})`}
     >
-      {activity.title}
+      <span className="ab-title">{activity.title}</span>
+      {height >= 38 && (
+        <span className="ab-time">
+          {activity.start_at.slice(11, 16)}–{activity.end_at.slice(11, 16)}
+        </span>
+      )}
       {canEdit && (
         <div
           className="activity-resize-handle"

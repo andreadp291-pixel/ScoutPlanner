@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { memberChangePassword } from '../api/auth'
-import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
+import { AuthLayout } from '../components/AuthLayout'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 
 export function MemberChangePassword() {
@@ -29,12 +29,12 @@ export function MemberChangePassword() {
   }
 
   return (
-    <div>
-      <h1>Cambia password</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Ciao {displayName}, scegli una nuova password personale (minimo 10 caratteri).
-      </p>
-      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 380 }}>
+    <AuthLayout
+      title="Scegli la tua password"
+      sub={`Ciao ${displayName ?? ''}, scegli una nuova password personale (minimo 10 caratteri).`}
+      footer={<Link to="/me/projects">Torna ai progetti</Link>}
+    >
+      <form onSubmit={handleSubmit}>
         <label>
           Nuova password
           <input
@@ -64,12 +64,6 @@ export function MemberChangePassword() {
           </p>
         )}
       </form>
-      <p style={{ marginTop: 16 }}>
-        <Link to="/me/projects" className="btn">
-          <ArrowLeftIcon />
-          Torna ai progetti
-        </Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

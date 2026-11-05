@@ -16,6 +16,7 @@ import { listPeople } from '../api/people'
 import { ActivityEditorModal } from '../components/ActivityEditorModal'
 import { GroupsManagerModal } from '../components/GroupsManagerModal'
 import { DayColumn } from '../components/calendar/DayColumn'
+import { DayStrip } from '../components/calendar/DayStrip'
 import { TimeAxis } from '../components/calendar/TimeAxis'
 import { dateRange, formatShortDate, minutesSinceMidnight, toIsoDatetime } from '../components/calendar/time'
 import { DownloadIcon } from '../components/icons/DownloadIcon'
@@ -43,6 +44,7 @@ export function ProjectCalendar() {
   const [swapTargetId, setSwapTargetId] = useState<number | null>(null)
   const [showGroupsManager, setShowGroupsManager] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
+  const calendarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const shareToken = searchParams.get('t')
@@ -276,7 +278,8 @@ export function ProjectCalendar() {
           )}
         </div>
       </div>
-      <div className="calendar-scroll" style={{ display: 'flex' }}>
+      <DayStrip days={days} scrollRef={calendarRef} />
+      <div className="calendar-scroll" ref={calendarRef} style={{ display: 'flex' }}>
         <TimeAxis />
         {days.map((date) => (
           <DayColumn

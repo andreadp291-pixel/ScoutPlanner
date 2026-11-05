@@ -93,7 +93,7 @@ export function ProjectView() {
             {formatDayLabel(project.start_date)} → {formatDayLabel(project.end_date)}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="hide-on-phone" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link to={`/projects/${id}/calendar`}>
             <button type="button">
               <CalendarIcon /> Calendario completo

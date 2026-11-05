@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { memberLogin } from '../api/auth'
+import { AuthLayout } from '../components/AuthLayout'
 import { GoogleLoginButton } from '../components/GoogleLoginButton'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 
@@ -28,24 +29,19 @@ export function MemberLogin() {
   }
 
   return (
-    <div>
-      <h1>Accedi</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Se sei stato invitato a un progetto via email, usa qui le tue credenziali.
-      </p>
-      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 380 }}>
+    <AuthLayout
+      title="Accesso collaboratori"
+      sub="Se sei stato invitato a un progetto via email, usa qui le tue credenziali."
+      footer={<Link to="/">Sono un capo: accedo con il link via email</Link>}
+    >
+      <form onSubmit={handleSubmit}>
         <label>
           Email
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label>
           Password
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         <button type="submit" className="primary" disabled={loading}>
           {loading ? 'Accesso...' : 'Accedi'}
@@ -57,9 +53,6 @@ export function MemberLogin() {
         )}
       </form>
       <GoogleLoginButton />
-      <p className="muted" style={{ marginTop: 16 }}>
-        Sei un capo squadriglia? <Link to="/">Accedi con il magic link</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }

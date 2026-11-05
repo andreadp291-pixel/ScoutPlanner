@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ownerLogin } from '../api/auth'
+import { AuthLayout } from '../components/AuthLayout'
+import { GoogleLoginButton } from '../components/GoogleLoginButton'
 import { useAuthStore } from '../state/authStore'
 
 export function OwnerLogin() {
@@ -27,24 +29,19 @@ export function OwnerLogin() {
   }
 
   return (
-    <div>
-      <h1>Accedi con password</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Se hai già impostato una password dal menu account, accedi qui direttamente.
-      </p>
-      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 380 }}>
+    <AuthLayout
+      title="Accesso con password"
+      sub="Se hai già impostato una password dal menu account, accedi qui direttamente."
+      footer={<Link to="/">Preferisco il link via email</Link>}
+    >
+      <form onSubmit={handleSubmit}>
         <label>
           Email
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label>
           Password
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         <button type="submit" className="primary" disabled={loading}>
           {loading ? 'Accesso...' : 'Accedi'}
@@ -55,9 +52,7 @@ export function OwnerLogin() {
           </p>
         )}
       </form>
-      <p className="muted" style={{ marginTop: 16 }}>
-        Non hai una password? <Link to="/">Accedi con il magic link</Link>
-      </p>
-    </div>
+      <GoogleLoginButton />
+    </AuthLayout>
   )
 }

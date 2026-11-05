@@ -82,8 +82,11 @@ export function GoogleLoginButton() {
   if (!CLIENT_ID) return null
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <div ref={containerRef} />
+    <div className="google-login">
+      <div className="or">
+        <span>oppure</span>
+      </div>
+      <div ref={containerRef} className="google-login-btn" />
       {error && (
         <p role="alert" style={{ color: 'var(--danger)', marginTop: 10 }}>
           {error}

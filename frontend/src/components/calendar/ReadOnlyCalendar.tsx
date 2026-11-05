@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import type { Activity } from '../../api/activities'
 import { DayColumn } from './DayColumn'
+import { DayStrip } from './DayStrip'
 import { TimeAxis } from './TimeAxis'
 
 interface ReadOnlyCalendarProps {
@@ -15,8 +17,11 @@ const noop = () => {}
 // l'unico gestore attivo (click su un'attività) ridiretto al popup rapido
 // invece che al modal di modifica.
 export function ReadOnlyCalendar({ days, activities, onActivityClick }: ReadOnlyCalendarProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
   return (
-    <div className="calendar-scroll" style={{ display: 'flex' }}>
+    <>
+    <DayStrip days={days} scrollRef={scrollRef} />
+    <div className="calendar-scroll" ref={scrollRef} style={{ display: 'flex' }}>
       <TimeAxis />
       {days.map((date) => (
         <DayColumn
@@ -36,5 +41,6 @@ export function ReadOnlyCalendar({ days, activities, onActivityClick }: ReadOnly
         />
       ))}
     </div>
+    </>
   )
 }

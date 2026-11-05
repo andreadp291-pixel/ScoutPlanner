@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { verifyLink } from '../api/auth'
+import { AuthLayout } from '../components/AuthLayout'
 import { useAuthStore } from '../state/authStore'
 
 export function AuthCallback() {
@@ -25,12 +26,15 @@ export function AuthCallback() {
 
   if (error) {
     return (
-      <div>
-        <h1>Accesso non riuscito</h1>
-        <p>{error}</p>
-      </div>
+      <AuthLayout title="Accesso non riuscito" sub={error} footer={<Link to="/">Richiedi un nuovo link</Link>}>
+        <p className="muted">I link di accesso valgono 15 minuti e si usano una volta sola.</p>
+      </AuthLayout>
     )
   }
 
-  return <p>Verifica in corso...</p>
+  return (
+    <AuthLayout title="Verifica in corso..." sub="Un momento, ti stiamo facendo entrare.">
+      <p className="muted">Se non succede nulla, torna indietro e richiedi un nuovo link.</p>
+    </AuthLayout>
+  )
 }

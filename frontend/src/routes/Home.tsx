@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestLink } from '../api/auth'
+import { AuthLayout } from '../components/AuthLayout'
 import { GoogleLoginButton } from '../components/GoogleLoginButton'
 
 export function Home() {
@@ -21,20 +22,28 @@ export function Home() {
 
   if (sent) {
     return (
-      <div className="card" style={{ maxWidth: 420 }}>
-        <h1>Controlla la tua email</h1>
-        <p>Ti abbiamo inviato un link di accesso a {email}. Il link scade tra 15 minuti.</p>
-      </div>
+      <AuthLayout
+        title="Controlla la tua email"
+        sub={<>Ti abbiamo inviato un link di accesso a <strong>{email}</strong>. Il link scade tra 15 minuti.</>}
+        footer={<button type="button" className="link-button" onClick={() => setSent(false)}>Usa un'altra email</button>}
+      >
+        <p className="muted">Non lo vedi? Controlla anche la cartella dello spam.</p>
+      </AuthLayout>
     )
   }
 
   return (
-    <div>
-      <h1>ScoutPlanner</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        Crea vademecum per campi e uscite, in coworking con la tua squadriglia.
-      </p>
-      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 420 }}>
+    <AuthLayout
+      title="Accedi a ScoutPlanner"
+      sub="Scrivi la tua email e ti mandiamo un link di accesso. Niente password da ricordare."
+      footer={
+        <>
+          <Link to="/login/owner">Ho già una password</Link>
+          <Link to="/login">Sono stato invitato a un progetto</Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
         <label>
           La tua email
           <input
@@ -46,7 +55,7 @@ export function Home() {
           />
         </label>
         <button type="submit" className="primary">
-          Ricevi link di accesso
+          Ricevi il link di accesso
         </button>
         {error && (
           <p role="alert" style={{ color: 'var(--danger)', marginTop: 10 }}>
@@ -55,12 +64,6 @@ export function Home() {
         )}
       </form>
       <GoogleLoginButton />
-      <p className="muted" style={{ marginTop: 16 }}>
-        Hai già impostato una password? <Link to="/login/owner">Accedi con email e password</Link>
-      </p>
-      <p className="muted" style={{ marginTop: 4 }}>
-        Sei stato invitato a un progetto via email? <Link to="/login">Accedi come collaboratore</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }
