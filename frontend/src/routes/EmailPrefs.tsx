@@ -39,7 +39,7 @@ export function EmailPrefs() {
             onChange={(e) => mutation.mutate({ ...prefs, report: e.target.checked })}
           />
           <span>
-            <strong>Promemoria e report</strong> — «ti mancano da compilare…» prima del campo, e ogni mattina alle 7 durante il campo le mie attività fatte, da fare e in ritardo.
+            <strong>Promemoria</strong> — «ti mancano da compilare…» per le attività assegnate a me, prima del campo. Durante il campo non arriva niente di automatico.
           </span>
         </label>
       </div>

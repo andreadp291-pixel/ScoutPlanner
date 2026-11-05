@@ -390,8 +390,8 @@ export function ProjectTokens() {
         <h2>Promemoria e report</h2>
         <p className="muted">
           Prima del campo, ogni 3 giorni, chi ha attività assegnate ancora da compilare riceve «ti mancano da compilare…» con i link;
-          tu vedi anche chi manca. Durante il campo, ogni mattina alle 7, ognuno riceve le proprie attività fatte, da fare e in ritardo.
-          Ognuno può disattivarli da «Notifiche email».
+          tu vedi anche chi manca. Durante il campo non parte nessuna email automatica. Il report (fatte, da fare, in ritardo)
+          lo mandi tu, quando vuoi. Ognuno può disattivare i promemoria da «Notifiche email».
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" onClick={() => remindMutation.mutate()} disabled={remindMutation.isPending}>

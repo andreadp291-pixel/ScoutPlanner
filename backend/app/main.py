@@ -33,7 +33,7 @@ from .routers import (
 async def lifespan(_app):
     init_db()
     history.purge_trash()
-    # il report giornaliero parte solo dove le email sono davvero configurate
+    # i promemoria automatici partono solo dove le email sono davvero configurate
     task = asyncio.create_task(notify.report_loop()) if SMTP_USER and SMTP_PASSWORD else None
     yield
     if task:

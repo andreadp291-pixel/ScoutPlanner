@@ -8,7 +8,7 @@ router = APIRouter(prefix="/projects/{project_id}/report", tags=["report"])
 
 @router.post("/send", status_code=202)
 def send_report_now(background: BackgroundTasks, actor: Actor = Depends(require_project_role("owner"))):
-    """Manda subito a tutti il report delle attività assegnate (quello automatico parte ogni mattina)."""
+    """Manda a tutti il report delle attività assegnate. Solo a richiesta: durante il campo non parte niente da solo."""
     background.add_task(send_project_report, actor.project_id, now_local())
     return {"ok": True}
 

@@ -93,11 +93,13 @@ def test_report_content_and_daily_run(client, project, outbox):
     owner_body = dict((to, b) for to, _, b in outbox)["o@x.it"]
     assert "STATO DEL PROGETTO" in owner_body and "Mia: 1 fatte, 1 da fare, 1 in ritardo" in owner_body
     assert "STATO DEL PROGETTO" not in body
-    # automatico: non prima delle 7, una volta sola al giorno
-    assert notify.run_daily_reports(datetime(2026, 7, 2, 6, 59)) == 0
+    # automatico: durante il campo non parte niente (niente "la tua prossima attività è...")
     outbox.clear()
-    assert notify.run_daily_reports(datetime(2026, 7, 2, 7, 0)) >= 2
-    assert notify.run_daily_reports(datetime(2026, 7, 2, 9, 0)) == 0
+    assert notify.run_daily_reminders(datetime(2026, 7, 2, 7, 0)) == 0 and outbox == []
+    # prima del campo: non prima delle 7, e una volta sola al giorno
+    assert notify.run_daily_reminders(datetime(2026, 6, 27, 6, 59)) == 0
+    assert notify.run_daily_reminders(datetime(2026, 6, 28, 7, 0)) >= 2
+    assert notify.run_daily_reminders(datetime(2026, 6, 28, 9, 0)) == 0
     # a mano, solo l'owner
     assert client.post(f"{base}/report/send", headers=h).status_code == 202
     assert client.post(f"{base}/report/send", headers=_member(client, base, h, "e@x.it")[1]).status_code == 403

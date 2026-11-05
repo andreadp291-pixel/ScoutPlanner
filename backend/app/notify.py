@@ -1,4 +1,4 @@
-"""Email di notifica (assegnazioni, modifiche, commenti) e report giornaliero delle attività assegnate."""
+"""Email di notifica (assegnazioni, modifiche, commenti), promemoria "da compilare" prima del campo e report a richiesta."""
 
 import asyncio
 import json
@@ -14,7 +14,7 @@ logger = logging.getLogger("scoutplanner.notify")
 
 _DAYS = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 _MONTHS = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
-REPORT_HOUR = 7  # il report parte dalle 7 del mattino (ora italiana)
+REPORT_HOUR = 7  # i promemoria partono dalle 7 del mattino (ora italiana)
 REMINDER_EVERY_DAYS = 3  # promemoria "da compilare": al massimo uno ogni 3 giorni a persona
 
 FOOTER = f"\n\n—\nNon vuoi più queste email? Gestiscile qui: {FRONTEND_BASE_URL}/#/account/email"
@@ -243,8 +243,8 @@ def now_local() -> datetime:
         return datetime.now()
 
 
-def run_daily_reports(now: datetime | None = None) -> int:
-    """Una volta al giorno, dalle 7, per i progetti in corso (da una settimana prima dell'inizio alla fine)."""
+def run_daily_reminders(now: datetime | None = None) -> int:
+    """Una volta al giorno, dalle 7, solo per i campi non ancora iniziati: durante il campo non parte niente da solo."""
     now = now or now_local()
     if now.hour < REPORT_HOUR:
         return 0
@@ -253,23 +253,14 @@ def run_daily_reports(now: datetime | None = None) -> int:
         if conn.execute("SELECT 1 FROM report_runs WHERE day = ?", (day,)).fetchone():
             return 0
         conn.execute("INSERT INTO report_runs (day) VALUES (?)", (day,))  # prima di inviare: al massimo una volta
-        ids = [
-            r["id"]
-            for r in conn.execute(
-                "SELECT id FROM projects WHERE start_date <= ? AND end_date >= ?",
-                ((now.date() + timedelta(days=7)).isoformat(), day),
-            )
-        ]
-    sent = sum(send_project_report(pid, now) for pid in ids)
-    with get_conn() as conn:  # promemoria "da compilare": finché il campo non è iniziato
         upcoming = [r["id"] for r in conn.execute("SELECT id FROM projects WHERE start_date > ?", (day,))]
-    return sent + sum(send_project_reminders(pid, now) for pid in upcoming)
+    return sum(send_project_reminders(pid, now) for pid in upcoming)
 
 
 async def report_loop() -> None:
     while True:
         try:
-            await asyncio.to_thread(run_daily_reports)
+            await asyncio.to_thread(run_daily_reminders)
         except Exception:
             logger.exception("Report giornaliero fallito")
         await asyncio.sleep(1800)
