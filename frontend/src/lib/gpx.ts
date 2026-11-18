@@ -1,3 +1,4 @@
+import { climb } from './elevation'
 import { haversineMeters } from './geo'
 
 export interface GpxPoint {
@@ -56,8 +57,6 @@ export function parseGpx(xmlText: string): GpxStats {
     .filter((s) => s.length > 0)
 
   let cumKm = 0
-  let elevationGainM = 0
-  let elevationLossM = 0
   const profile: { km: number; ele: number }[] = []
   const track: GpxTrackPoint[] = []
   const points: GpxPoint[] = []
@@ -68,18 +67,13 @@ export function parseGpx(xmlText: string): GpxStats {
       points.push(point)
       if (i > 0) {
         cumKm += haversineMeters(segment[i - 1], point) / 1000
-        const eleA = segment[i - 1].ele
-        const eleB = point.ele
-        if (eleA !== null && eleB !== null) {
-          const delta = eleB - eleA
-          if (delta > 0) elevationGainM += delta
-          else elevationLossM += -delta
-        }
       }
       track.push({ km: cumKm, lat: point.lat, lon: point.lon, ele: point.ele })
       if (point.ele !== null) profile.push({ km: cumKm, ele: point.ele })
     }
   }
+
+  const { gain: elevationGainM, loss: elevationLossM } = climb(profile.map((p) => p.ele))
 
   let maxAltitudeM: number | null = null
   let minAltitudeM: number | null = null

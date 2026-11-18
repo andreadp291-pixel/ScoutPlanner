@@ -1,158 +1,20 @@
 import L from 'leaflet'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { uploadFile } from '../../api/uploads'
+import { indexAtKm } from '../../lib/elevation'
 import { parseGpx, type GpxStats } from '../../lib/gpx'
 import { isHttpUrl } from '../../lib/url'
 import { CompassIcon } from '../icons/CompassIcon'
 import type { Block } from './blocks'
+import { ElevationChart } from './ElevationChart'
 
 type LatLon = [number, number]
-type Bounds = [LatLon, LatLon]
 
-const CHART_H = 170
-const MARGIN = { top: 10, right: 10, bottom: 20, left: 38 }
-const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom
 
 // Punto più vicino a un dato km in un array ordinato per km crescente
 // (usato sia per il profilo quota che per il tracciato lat/lon).
 function nearestByKm<T extends { km: number }>(arr: T[], km: number): T {
-  let lo = 0
-  let hi = arr.length - 1
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1
-    if (arr[mid].km < km) lo = mid + 1
-    else hi = mid
-  }
-  return arr[lo]
-}
-
-function ElevationChart({
-  profile,
-  scrubKm,
-  onScrubKmChange,
-}: {
-  profile: GpxStats['profile']
-  scrubKm: number
-  onScrubKmChange: (km: number) => void
-}) {
-  // Si disegna alla larghezza reale del riquadro: con un viewBox fisso stirato, testi e pallino si deformano.
-  const hasChart = profile.length >= 2
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const [chartW, setChartW] = useState(600)
-  useEffect(() => {
-    const el = wrapRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setChartW(Math.max(el.clientWidth, 200)))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [hasChart]) // il riquadro esiste solo quando c'è un profilo
-  const CHART_W = chartW
-  const INNER_W = CHART_W - MARGIN.left - MARGIN.right
-  const maxKm = profile.length ? profile[profile.length - 1].km || 1 : 1
-  const eles = profile.map((p) => p.ele)
-  const minEle = profile.length ? Math.min(...eles) : 0
-  const maxEle = profile.length ? Math.max(...eles) : 0
-  const eleRange = Math.max(maxEle - minEle, 1)
-
-  // Dislivello positivo cumulato punto per punto: lookup istantaneo mentre si scorre.
-  const cumGain = useMemo(() => {
-    const out: number[] = new Array(profile.length).fill(0)
-    for (let i = 1; i < profile.length; i++) {
-      const delta = profile[i].ele - profile[i - 1].ele
-      out[i] = out[i - 1] + (delta > 0 ? delta : 0)
-    }
-    return out
-  }, [profile])
-
-  if (profile.length < 2) return null
-
-  const toX = (km: number) => MARGIN.left + (km / maxKm) * INNER_W
-  const toY = (ele: number) => MARGIN.top + INNER_H - ((ele - minEle) / eleRange) * INNER_H
-
-  const linePoints = profile.map((p) => `${toX(p.km).toFixed(1)},${toY(p.ele).toFixed(1)}`).join(' ')
-  const areaPoints = `${toX(0)},${MARGIN.top + INNER_H} ${linePoints} ${toX(maxKm)},${MARGIN.top + INNER_H}`
-
-  const gridLines = [0, 0.5, 1].map((f) => minEle + eleRange * f)
-
-  const current = nearestByKm(profile, scrubKm)
-  const currentIdx = profile.indexOf(current)
-  const dotX = toX(current.km)
-  const dotY = toY(current.ele)
-
-  return (
-    <div className="gpx-elevation" ref={wrapRef}>
-      <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="gpx-elevation-chart">
-        <defs>
-          <linearGradient id="gpxAreaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" className="gpx-elevation-gradient-start" />
-            <stop offset="100%" className="gpx-elevation-gradient-end" />
-          </linearGradient>
-        </defs>
-        {gridLines.map((ele) => (
-          <g key={ele}>
-            <line
-              x1={MARGIN.left}
-              x2={CHART_W - MARGIN.right}
-              y1={toY(ele)}
-              y2={toY(ele)}
-              className="gpx-elevation-grid"
-            />
-            <text x={MARGIN.left - 6} y={toY(ele)} className="gpx-elevation-axis-label" textAnchor="end" dy="3.5">
-              {Math.round(ele)}
-            </text>
-          </g>
-        ))}
-        <text x={MARGIN.left} y={CHART_H - 4} className="gpx-elevation-axis-label">
-          0 km
-        </text>
-        <text x={CHART_W - MARGIN.right} y={CHART_H - 4} className="gpx-elevation-axis-label" textAnchor="end">
-          {maxKm.toFixed(1)} km
-        </text>
-        <polygon points={areaPoints} fill="url(#gpxAreaFill)" />
-        <polyline points={linePoints} className="gpx-elevation-line" />
-        <line x1={dotX} x2={dotX} y1={MARGIN.top} y2={MARGIN.top + INNER_H} className="gpx-elevation-cursor" />
-        <circle cx={dotX} cy={dotY} r="5" className="gpx-elevation-dot" />
-      </svg>
-      <input
-        type="range"
-        className="gpx-elevation-slider"
-        min={0}
-        max={maxKm}
-        step={maxKm / 500 || 0.01}
-        value={scrubKm}
-        onChange={(e) => onScrubKmChange(Number(e.target.value))}
-        aria-label="Scorri la traccia"
-      />
-      <div className="gpx-scrub-stats">
-        <span>
-          <strong>{current.km.toFixed(2)}</strong> km
-        </span>
-        <span>
-          <strong>{Math.round(current.ele)}</strong> m quota
-        </span>
-        <span>
-          +<strong>{Math.round(cumGain[currentIdx] ?? 0)}</strong> m finora
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function computeBounds(points: LatLon[]): Bounds {
-  let minLat = points[0][0]
-  let maxLat = points[0][0]
-  let minLon = points[0][1]
-  let maxLon = points[0][1]
-  for (const [lat, lon] of points) {
-    if (lat < minLat) minLat = lat
-    if (lat > maxLat) maxLat = lat
-    if (lon < minLon) minLon = lon
-    if (lon > maxLon) maxLon = lon
-  }
-  return [
-    [minLat, minLon],
-    [maxLat, maxLon],
-  ]
+  return arr[indexAtKm(arr, km)]
 }
 
 function useGpxStats(url: string) {
@@ -231,11 +93,9 @@ function GpxMap({ segments, cursor }: { segments: LatLon[][]; cursor: LatLon | n
       maxZoom: 19,
     }).addTo(map)
 
-    const allLatLngs: LatLon[] = []
-    segments.forEach((segment) => {
-      allLatLngs.push(...segment)
-      L.polyline(segment, { color: '#c0392b', weight: 3 }).addTo(map)
-    })
+    // flat() e non push(...segment): con centinaia di migliaia di punti lo spread supera il limite di argomenti
+    const allLatLngs: LatLon[] = segments.flat()
+    segments.forEach((segment) => L.polyline(segment, { color: '#c0392b', weight: 3 }).addTo(map))
 
     if (allLatLngs.length > 0) {
       L.circleMarker(allLatLngs[0], {
@@ -280,10 +140,12 @@ function GpxTrackView({ url, filename }: { url: string; filename: string }) {
   const { stats, error } = useGpxStats(url)
   const [scrubKm, setScrubKm] = useState(0)
 
-  const segments: LatLon[][] =
-    stats?.segments.map((seg) => seg.map((p): LatLon => [p.lat, p.lon])) ?? []
-  const allPoints = segments.flat()
-  const bounds = allPoints.length > 0 ? computeBounds(allPoints) : null
+  // una volta per traccia, non a ogni movimento del mirino (con 100k+ punti faceva scattare tutto)
+  const segments = useMemo(
+    () => stats?.segments.map((seg) => seg.map((p): LatLon => [p.lat, p.lon])) ?? [],
+    [stats],
+  )
+  const hasPoints = segments.some((seg) => seg.length > 0)
 
   const cursor: LatLon | null = stats?.track.length
     ? (() => {
@@ -307,7 +169,7 @@ function GpxTrackView({ url, filename }: { url: string; filename: string }) {
       </div>
       {error && <p className="muted">{error}</p>}
       {!error && !stats && <p className="muted">Caricamento traccia…</p>}
-      {stats && bounds && (
+      {stats && hasPoints && (
         <>
           <GpxMap segments={segments} cursor={cursor} />
           <GpxStatsStrip stats={stats} />
