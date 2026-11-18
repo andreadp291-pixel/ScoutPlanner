@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
+from ..config import OWNER_SESSION_MAX_AGE
 from ..deps import get_bearer_token, require_member_session
-from ..schemas import EmailPrefsIO, MemberProjectOut
+from ..security import verify_owner_session_token
+from ..schemas import EmailPrefsIO, MemberProjectOut, ProfileIO
 from .access import _identity
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -53,3 +55,29 @@ def set_email_prefs(body: EmailPrefsIO, token: str = Depends(get_bearer_token)):
             (email, body.notifications, body.report, body.reminder_hour),
         )
     return body
+
+
+@router.get("/profile", response_model=ProfileIO)
+def get_profile(token: str = Depends(get_bearer_token)):
+    with get_conn() as conn:
+        who = _identity(conn, token)
+    if who is None:
+        raise HTTPException(401, "Accedi con il tuo account")
+    return {"email": who[0], "name": who[1]}
+
+
+@router.put("/profile", response_model=ProfileIO)
+def set_profile(body: ProfileIO, token: str = Depends(get_bearer_token)):
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(422, "Il nome non può essere vuoto")
+    with get_conn() as conn:
+        email = _my_email(conn, token)
+        if verify_owner_session_token(token, max_age=OWNER_SESSION_MAX_AGE) is not None:
+            conn.execute(
+                "INSERT INTO owners (email, display_name) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET display_name = excluded.display_name",
+                (email, name),
+            )
+        else:
+            conn.execute("UPDATE members SET display_name = ? WHERE email = ?", (name, email))
+    return {"email": email, "name": name}

@@ -22,6 +22,7 @@ const OPTIONS: { type: BlockType; label: string; icon: React.ReactNode }[] = [
   { type: 'list', label: 'Elenco', icon: <ListIcon size={22} /> },
   { type: 'image', label: 'Foto', icon: <ImageIcon size={22} /> },
   { type: 'link', label: 'Link', icon: <LinkIcon size={22} /> },
+  { type: 'goto', label: 'Pulsante a pagina', icon: <FileTextIcon size={22} /> },
   { type: 'phone', label: 'Telefono', icon: <PhoneIcon size={22} /> },
   { type: 'location', label: 'Posizione', icon: <LocationIcon size={22} /> },
   { type: 'table', label: 'Tabella', icon: <TableIcon size={22} /> },

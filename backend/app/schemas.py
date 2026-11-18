@@ -103,10 +103,21 @@ class GroupCreateIn(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+class ProfileIO(BaseModel):
+    email: str = ""  # solo in lettura
+    name: str = Field(min_length=1, max_length=100)
+
+
+class GroupUpdateIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+
 class GroupOut(BaseModel):
     id: int
     project_id: int
     name: str
+    color: str | None = None
     created_at: str
 
 
@@ -313,6 +324,7 @@ class PersonOut(BaseModel):
 class MaterialActivityOut(BaseModel):
     id: int
     title: str
+    chi: str | None = None  # ref persona o gruppo ('g<id>') scelto nella tabella dell'attività
 
 
 class MaterialOut(BaseModel):

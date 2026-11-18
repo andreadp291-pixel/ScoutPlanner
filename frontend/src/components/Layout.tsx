@@ -1,8 +1,9 @@
 import { NotificationBell, PresenceBar } from './LiveBar'
 import { useViewModeStore } from '../state/viewModeStore'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useMatch } from 'react-router-dom'
 import { getProject } from '../api/projects'
+import { getProfile } from '../api/me'
 import { useAuthStore } from '../state/authStore'
 import { useMemberAuthStore } from '../state/memberAuthStore'
 import { AccountMenu } from './AccountMenu'
@@ -35,6 +36,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     enabled: projectId !== null,
   })
 
+  // il nome scelto nel profilo, se c'è; altrimenti email (owner) o nome del membro
+  const profileName = useQuery({ queryKey: ['profile'], queryFn: getProfile, enabled: !!(ownerEmail ?? memberName) }).data?.name
+  const queryClient = useQueryClient()
+
   if (AUTH_PATHS.includes(pathname)) return <>{children}</>
 
   const placeMatch = /\/projects\/\d+\/(activities|pages)\/(\d+)/.exec(pathname)
@@ -49,22 +54,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
           { to: `${base}/calendar`, label: 'Calendario', icon: <CalendarIcon size={20} />, active: pathname.startsWith(`${base}/calendar`) },
           { to: `${base}/materials`, label: 'Materiali', icon: <ListIcon size={20} />, active: pathname.startsWith(`${base}/materials`) },
           { to: `${base}/info`, label: 'Info', icon: <InfoIcon size={20} />, active: pathname.startsWith(`${base}/info`) || pathname.startsWith(`${base}/pages`) },
+          { to: `${base}/groups`, label: 'Gruppi', icon: <UsersIcon size={20} />, active: pathname.startsWith(`${base}/groups`) },
           ...(ownerEmail ? [{ to: `${base}/tokens`, label: 'Persone', icon: <UsersIcon size={20} />, active: pathname.startsWith(`${base}/tokens`) }] : []),
         ]
 
   const accountItems = ownerEmail
     ? [
+        { to: '/account/profile', label: 'Profilo' },
         { to: '/projects', label: 'I miei progetti' },
         { to: '/account/email', label: 'Notifiche email' },
         { to: '/owner/set-password', label: 'Imposta password' },
       ]
     : [
+        { to: '/account/profile', label: 'Profilo' },
         { to: '/me/projects', label: 'I miei progetti' },
         { to: '/account/email', label: 'Notifiche email' },
         { to: '/member/change-password', label: 'Cambia password' },
       ]
-  const accountLabel = ownerEmail ?? memberName
+  const accountLabel = profileName ?? ownerEmail ?? memberName
   function logout() {
+    queryClient.removeQueries({ queryKey: ['profile'] })
     ownerLogout()
     memberLogout()
   }

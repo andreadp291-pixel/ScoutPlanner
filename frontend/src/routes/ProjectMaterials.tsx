@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { assignMaterial, listMaterials, type Material } from '../api/materials'
 import { listPeople, type Person } from '../api/people'
+import { listGroups } from '../api/groups'
 import { getProjectAccess } from '../api/projects'
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { Spinner } from '../components/Spinner'
@@ -43,6 +44,7 @@ export function ProjectMaterials() {
   const materialsQuery = useQuery({ queryKey: ['materials', id], queryFn: () => listMaterials(id) })
   const peopleQuery = useQuery({ queryKey: ['people', id], queryFn: () => listPeople(id) })
   const accessQuery = useQuery({ queryKey: ['access', id], queryFn: () => getProjectAccess(id) })
+  const groupsQuery = useQuery({ queryKey: ['groups', id], queryFn: () => listGroups(id) })
 
   const assignMutation = useMutation({
     mutationFn: (m: Material) =>
@@ -58,8 +60,16 @@ export function ProjectMaterials() {
   const canEdit = canEditRole(accessQuery.data?.role)
   const myRef = accessQuery.data?.ref
   const materials = materialsQuery.data.filter(
-    (m) => !onlyMine || (myRef !== undefined && (m.procure_ref === myRef || m.transport_ref === myRef)),
+    (m) =>
+      !onlyMine ||
+      (myRef !== undefined &&
+        (m.procure_ref === myRef || m.transport_ref === myRef || m.activities.some((a) => a.chi === myRef))),
   )
+  const names = new Map<string, string>([
+    ...people.map((p) => [p.ref, p.name] as [string, string]),
+    ...(groupsQuery.data ?? []).map((g) => [`g${g.id}`, g.name] as [string, string]),
+  ])
+  const chiLabel = (ref: string) => names.get(ref) ?? '(rimosso)'
 
   return (
     <div>
@@ -83,7 +93,7 @@ export function ProjectMaterials() {
         <div key={m.key} className="card" style={{ marginBottom: 8 }}>
           <strong>{m.name}</strong>
           <p className="muted" style={{ margin: '2px 0 8px' }}>
-            {m.activities.map((a) => a.title).join(' · ')}
+            {m.activities.map((a) => (a.chi ? `${a.title} (${chiLabel(a.chi)})` : a.title)).join(' · ')}
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <label>

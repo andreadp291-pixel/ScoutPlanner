@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 
 from ..db import get_conn
-from ..deps import Actor, require_project_role
+from ..deps import Actor, owner_name, require_project_role
 from ..schemas import PersonOut
 
 
 def project_people(conn, project_id: int) -> list[dict]:
     """Chi può ricevere assegnazioni: owner, membri con account, persone con link non revocato."""
     owner = conn.execute("SELECT owner_email FROM projects WHERE id = ?", (project_id,)).fetchone()
-    people = [{"ref": "o", "name": owner["owner_email"], "kind": "owner"}]
+    people = [{"ref": "o", "name": owner_name(conn, owner["owner_email"]), "kind": "owner"}]
     for r in conn.execute(
         """SELECT m.id, m.display_name FROM project_members pm
            JOIN members m ON m.id = pm.member_id WHERE pm.project_id = ? ORDER BY m.display_name""",

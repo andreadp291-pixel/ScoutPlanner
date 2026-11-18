@@ -126,7 +126,9 @@ def test_assignees_and_materials(client, project):
 
     # formato tabella «cosa<TAB>chi»: la virgola resta nel nome, chi e righe vuote non finiscono nella lista
     client.patch(f"{url}/{b['id']}", json={"materials": "Torcia\tg1\nTelo, grande\to\n\t"}, headers=h)
-    assert [m["key"] for m in client.get(f"/projects/{project}/materials", headers=h).json()] == ["corda", "telo, grande", "torcia"]
+    mats = client.get(f"/projects/{project}/materials", headers=h).json()
+    assert [m["key"] for m in mats] == ["corda", "telo, grande", "torcia"]
+    assert {x["id"]: x["chi"] for x in mats[2]["activities"]} == {a["id"]: None, b["id"]: "g1"}
 
     # chi ha il link è riconosciuto: access restituisce il suo ref
     me = client.get(f"/projects/{project}/access", headers={"Authorization": f"Bearer {link['raw_token']}"}).json()
@@ -207,3 +209,23 @@ def test_history_trash_and_restore(client, project):
     vh = {"Authorization": f"Bearer {v}"}
     assert client.get(f"{base}/history", headers=vh).status_code == 200
     assert client.post(f"{base}/trash/page/{pid}/restore", headers=vh).status_code == 403
+
+
+def test_group_color(client, project):
+    h, url = owner(), f"/projects/{project}/groups"
+    g = client.post(url, json={"name": "Lupi"}, headers=h).json()
+    assert g["color"] is None
+    assert client.patch(f"{url}/{g['id']}", json={"color": "#12abEF"}, headers=h).json() == {**g, "color": "#12abEF"}
+    assert client.patch(f"{url}/{g['id']}", json={"name": "Volpi"}, headers=h).json()["color"] == "#12abEF"  # il nome non tocca il colore
+    assert client.patch(f"{url}/{g['id']}", json={"color": "red;x"}, headers=h).status_code == 422
+
+
+def test_profile_name(client, project):
+    h = owner()
+    assert client.get("/me/profile", headers=h).json() == {"email": "o@x.it", "name": "o"}
+    assert client.put("/me/profile", json={"name": "  "}, headers=h).status_code == 422
+    assert client.put("/me/profile", json={"name": "Akela"}, headers=h).json()["name"] == "Akela"
+    people = client.get(f"/projects/{project}/people", headers=h).json()
+    assert people[0] == {"ref": "o", "name": "Akela", "kind": "owner"}  # il nome scelto sostituisce l'email
+    assert client.get("/me/profile").status_code == 401
+    client.put("/me/profile", json={"name": "o@x.it"}, headers=h)  # il DB è condiviso fra i test

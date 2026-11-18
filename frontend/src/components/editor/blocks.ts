@@ -24,6 +24,7 @@ export type Block =
       engine: 'tomtom' | 'osrm' | null
     }
   | { id: string; type: 'divider' }
+  | { id: string; type: 'goto'; target: string; label: string }
 
 export type BlockType = Block['type']
 
@@ -81,6 +82,8 @@ export function emptyBlock(type: BlockType): Block {
       }
     case 'divider':
       return { id, type }
+    case 'goto':
+      return { id, type, target: '', label: '' }
   }
 }
 

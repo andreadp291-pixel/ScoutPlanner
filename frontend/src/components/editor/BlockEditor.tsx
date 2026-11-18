@@ -11,6 +11,7 @@ import { TrashIcon } from '../icons/TrashIcon'
 import { AddBlockSheet } from './AddBlockSheet'
 import type { ActivityDoc, Block, BlockType } from './blocks'
 import { emptyBlock } from './blocks'
+import { GotoBlockBody } from './GotoBlockBody'
 import { GpxBlockBody } from './GpxBlockBody'
 import { LocationPickerModal, type PickedLocation } from './LocationPickerModal'
 import { TablePresetModal, type TablePresetGroup } from './TablePresetModal'
@@ -260,6 +261,9 @@ function BlockBody({ block, editable, projectId, presetDays, presetGroups, onUpd
 
     case 'divider':
       return <hr className="block-divider" />
+
+    case 'goto':
+      return <GotoBlockBody block={block} editable={editable} projectId={projectId} onUpdate={onUpdate} />
   }
 }
 

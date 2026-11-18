@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 
 from ..config import MEMBER_SESSION_MAX_AGE, OWNER_SESSION_MAX_AGE
 from ..db import get_conn
-from ..deps import Actor, get_bearer_token, require_project_role
+from ..deps import Actor, get_bearer_token, owner_name, require_project_role
 from ..mail import _send
 from ..schemas import AccessApproveIn, AccessRequestIn, AccessRequestOut, TransferIn
 from ..security import verify_member_session_token, verify_owner_session_token
@@ -15,7 +15,8 @@ def _identity(conn, token: str) -> tuple[str, str] | None:
     """(email, nome) di chi ha una sessione valida, owner o membro; None per i link anonimi."""
     owner = verify_owner_session_token(token, max_age=OWNER_SESSION_MAX_AGE)
     if owner is not None:
-        return owner["email"], owner["email"].split("@")[0]
+        name = owner_name(conn, owner["email"])
+        return owner["email"], name.split("@")[0]
     member = verify_member_session_token(token, max_age=MEMBER_SESSION_MAX_AGE)
     if member is not None:
         row = conn.execute("SELECT email, display_name, token_version FROM members WHERE id = ?", (member["mid"],)).fetchone()

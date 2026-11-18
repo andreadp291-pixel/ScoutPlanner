@@ -3,7 +3,7 @@ import { apiFetch } from './client'
 export interface Material {
   key: string
   name: string
-  activities: { id: number; title: string }[]
+  activities: { id: number; title: string; chi: string | null }[] // chi = ref persona o 'g<id>' dalla tabella dell'attività
   procure_ref: string | null
   transport_ref: string | null
 }

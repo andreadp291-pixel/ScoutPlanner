@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { Activity } from '../../api/activities'
 import { DayColumn } from './DayColumn'
 import { DayStrip } from './DayStrip'
+import { GroupLegend } from './GroupLegend'
 import { TimeAxis } from './TimeAxis'
 
 interface ReadOnlyCalendarProps {
@@ -20,6 +21,7 @@ export function ReadOnlyCalendar({ days, activities, onActivityClick }: ReadOnly
   const scrollRef = useRef<HTMLDivElement>(null)
   return (
     <>
+    <GroupLegend />
     <DayStrip days={days} scrollRef={scrollRef} />
     <div className="calendar-scroll" ref={scrollRef} style={{ display: 'flex' }}>
       <TimeAxis />

@@ -326,3 +326,5 @@ button.link { background: none; border: 0; padding: 0; min-height: 0; color: var
   .print-day:last-child { break-after: auto; }
   @page { margin: 14mm; }
 }
+.group-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.group-legend span { display: inline-flex; align-items: center; gap: 5px; }

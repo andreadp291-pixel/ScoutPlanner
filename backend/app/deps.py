@@ -24,6 +24,11 @@ def get_bearer_token(request: Request) -> str:
     return header[len("Bearer "):]
 
 
+def owner_name(conn, email: str) -> str:
+    row = conn.execute("SELECT display_name FROM owners WHERE email = ?", (email,)).fetchone()
+    return (row["display_name"] if row else None) or email
+
+
 def _owner_token_version_matches(conn, email: str, tv: int) -> bool:
     row = conn.execute("SELECT token_version FROM owners WHERE email = ?", (email,)).fetchone()
     # Nessuna riga owners = owner che non ha mai impostato una password: versione implicita 0.
@@ -75,7 +80,7 @@ def require_project_role(min_role: str):
                     raise HTTPException(status_code=401, detail="Sessione non più valida, effettua di nuovo il login")
                 if owner_data["email"] != project["owner_email"]:
                     raise HTTPException(status_code=403, detail="Non sei l'owner di questo progetto")
-                actor = Actor(role="owner", name=owner_data["email"], project_id=project_id, ref="o")
+                actor = Actor(role="owner", name=owner_name(conn, owner_data["email"]), project_id=project_id, ref="o")
             else:
                 member_data = verify_member_session_token(token, max_age=MEMBER_SESSION_MAX_AGE)
                 if member_data is not None:

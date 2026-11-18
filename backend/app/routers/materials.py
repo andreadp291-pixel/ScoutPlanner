@@ -10,12 +10,16 @@ from .people import project_people
 router = APIRouter(prefix="/projects/{project_id}/materials", tags=["materials"])
 
 
-def _items(text: str) -> list[str]:
-    # Riga «cosa<TAB>chi» dalla tabella dell'attività; altrimenti vecchio testo libero separato da , o ;
+def _items(text: str) -> list[tuple[str, str | None]]:
+    """-> [(cosa, chi)]. Riga «cosa<TAB>chi» dalla tabella dell'attività; altrimenti vecchio testo libero separato da , o ;"""
     out = []
     for line in text.split("\n"):
-        parts = [line.split("\t")[0]] if "\t" in line else re.split(r"[,;]+", line)
-        out += [p.strip() for p in parts if p.strip()]
+        if "\t" in line:
+            cosa, chi = line.split("\t", 1)
+            if cosa.strip():
+                out.append((cosa.strip(), chi.strip() or None))
+        else:
+            out += [(p.strip(), None) for p in re.split(r"[,;]+", line) if p.strip()]
     return out
 
 
@@ -32,10 +36,10 @@ def list_materials(actor: Actor = Depends(require_project_role("viewer"))):
         }
     found: dict[str, dict] = {}
     for a in acts:
-        for name in _items(a["materials"]):
+        for name, chi in _items(a["materials"]):
             entry = found.setdefault(name.casefold(), {"key": name.casefold(), "name": name, "activities": []})
             if all(x["id"] != a["id"] for x in entry["activities"]):
-                entry["activities"].append({"id": a["id"], "title": a["title"]})
+                entry["activities"].append({"id": a["id"], "title": a["title"], "chi": chi})
     out = []
     for key, entry in sorted(found.items()):
         row = assigned.get(key)

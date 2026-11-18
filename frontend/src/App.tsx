@@ -20,6 +20,8 @@ import { ProjectHistory } from './routes/ProjectHistory'
 import { ProjectPrint } from './routes/ProjectPrint'
 import { ProjectInfo } from './routes/ProjectInfo'
 import { ProjectMaterials } from './routes/ProjectMaterials'
+import { ProjectGroups } from './routes/ProjectGroups'
+import { Profile } from './routes/Profile'
 import { ProjectList } from './routes/ProjectList'
 import { ProjectPageEditor } from './routes/ProjectPageEditor'
 import { ProjectTokens } from './routes/ProjectTokens'
@@ -91,6 +93,7 @@ function App() {
                 }
               />
               <Route path="/account/email" element={<EmailPrefs />} />
+              <Route path="/account/profile" element={<Profile />} />
               <Route
                 path="/owner/set-password"
                 element={
@@ -126,6 +129,7 @@ function App() {
               <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
               <Route path="/projects/:projectId/history" element={<ProjectHistory />} />
               <Route path="/projects/:projectId/materials" element={<ProjectMaterials />} />
+              <Route path="/projects/:projectId/groups" element={<ProjectGroups />} />
               <Route path="/projects/:projectId/pages/:pageId" element={<ProjectPageEditor />} />
               <Route
                 path="/projects/:projectId/tokens"

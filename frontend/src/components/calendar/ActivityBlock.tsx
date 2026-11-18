@@ -1,4 +1,6 @@
+import { useQuery } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
+import { groupColor, listGroups } from '../../api/groups'
 import type { Activity } from '../../api/activities'
 import { DAY_END_MINUTES, DAY_START_MINUTES, minutesSinceMidnight } from './time'
 
@@ -38,6 +40,10 @@ export function ActivityBlock({
   onSwapHoverId,
 }: ActivityBlockProps) {
   const ownDate = activity.start_at.slice(0, 10)
+  const pid = activity.project_id
+  const groups = useQuery({ queryKey: ['groups', pid], queryFn: () => listGroups(pid) }).data ?? []
+  const groupById = new Map(groups.map((g) => [g.id, g]))
+  const groupNames = activity.group_ids.map((g) => groupById.get(g)?.name).filter(Boolean).join(', ')
   const startMinutes = minutesSinceMidnight(activity.start_at)
   const endMinutes = minutesSinceMidnight(activity.end_at)
   const duration = endMinutes - startMinutes
@@ -186,7 +192,8 @@ export function ActivityBlock({
         opacity: isLiftedElsewhere ? 0.35 : 1,
         ['--cc' as string]: activity.color,
       } as React.CSSProperties}
-      title={`${activity.title} (${activity.start_at.slice(11)}–${activity.end_at.slice(11)})`}
+      title={`${activity.title} (${activity.start_at.slice(11)}–${activity.end_at.slice(11)})${groupNames ? `
+Gruppi: ${groupNames}` : ''}`}
     >
       <span className="ab-title">{activity.title}</span>
       {height >= 38 && (
@@ -197,7 +204,7 @@ export function ActivityBlock({
       {height >= 38 && activity.group_ids.length > 0 && (
         <span className="ab-groups">
           {activity.group_ids.map((g) => (
-            <i key={g} className="gd" style={{ background: `var(--g${g % 6})` }} />
+            <i key={g} className="gd" title={groupById.get(g)?.name} style={{ background: groupColor(groupById.get(g) ?? { id: g, color: null }) }} />
           ))}
         </span>
       )}

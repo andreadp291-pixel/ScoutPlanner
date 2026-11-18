@@ -11,3 +11,12 @@ export interface MemberProject {
 export function getMyProjects() {
   return apiFetch<MemberProject[]>('/me/projects', { useMemberSession: true })
 }
+
+export interface Profile {
+  email: string
+  name: string
+}
+
+export const getProfile = () => apiFetch<Profile>('/me/profile', { anySession: true })
+export const setProfile = (name: string) =>
+  apiFetch<Profile>('/me/profile', { method: 'PUT', body: { name }, anySession: true })

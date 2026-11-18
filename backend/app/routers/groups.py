@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..db import get_conn
 from ..deps import Actor, require_project_role
-from ..schemas import GroupCreateIn, GroupOut
+from ..schemas import GroupCreateIn, GroupOut, GroupUpdateIn
 
 router = APIRouter(prefix="/projects/{project_id}/groups", tags=["groups"])
 
@@ -28,7 +28,7 @@ def create_group(body: GroupCreateIn, actor: Actor = Depends(require_project_rol
 
 @router.patch("/{group_id}", response_model=GroupOut)
 def rename_group(
-    group_id: int, body: GroupCreateIn, actor: Actor = Depends(require_project_role("editor"))
+    group_id: int, body: GroupUpdateIn, actor: Actor = Depends(require_project_role("editor"))
 ):
     with get_conn() as conn:
         current = conn.execute(
@@ -36,7 +36,10 @@ def rename_group(
         ).fetchone()
         if not current:
             raise HTTPException(404, "Gruppo non trovato")
-        conn.execute("UPDATE groups SET name = ? WHERE id = ?", (body.name, group_id))
+        conn.execute(
+            "UPDATE groups SET name = ?, color = ? WHERE id = ?",
+            (body.name or current["name"], body.color if "color" in body.model_fields_set else current["color"], group_id),
+        )
         row = conn.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
     return dict(row)
 
