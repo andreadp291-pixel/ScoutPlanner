@@ -124,6 +124,10 @@ def test_assignees_and_materials(client, project):
     assert client.get(f"/projects/{project}/materials", headers=h).json()[0]["procure_ref"] == refs["Silvia"]
     assert client.put(f"/projects/{project}/materials", json={"name": "Corda", "procure_ref": "m999"}, headers=h).status_code == 400
 
+    # formato tabella «cosa<TAB>chi»: la virgola resta nel nome, chi e righe vuote non finiscono nella lista
+    client.patch(f"{url}/{b['id']}", json={"materials": "Torcia\tg1\nTelo, grande\to\n\t"}, headers=h)
+    assert [m["key"] for m in client.get(f"/projects/{project}/materials", headers=h).json()] == ["corda", "telo, grande", "torcia"]
+
     # chi ha il link è riconosciuto: access restituisce il suo ref
     me = client.get(f"/projects/{project}/access", headers={"Authorization": f"Bearer {link['raw_token']}"}).json()
     assert me["ref"] == refs["Silvia"]

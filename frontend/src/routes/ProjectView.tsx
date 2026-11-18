@@ -6,6 +6,8 @@ import type { Activity } from '../api/activities'
 import { listActivities } from '../api/activities'
 import { listPages } from '../api/pages'
 import { listPeople } from '../api/people'
+import { listGroups } from '../api/groups'
+import { MaterialsTable } from '../components/MaterialsTable'
 import { getProject, getProjectAccess } from '../api/projects'
 import { ActivityQuickViewModal } from '../components/ActivityQuickViewModal'
 import { dateRange, formatDayLabel, minutesSinceMidnight, minutesToHHMM, nowMinutes, todayDateString } from '../components/calendar/time'
@@ -49,6 +51,11 @@ export function ProjectView() {
   const peopleQuery = useQuery({
     queryKey: ['people', id],
     queryFn: () => listPeople(id),
+    enabled: !!projectQuery.data,
+  })
+  const groupsQuery = useQuery({
+    queryKey: ['groups', id],
+    queryFn: () => listGroups(id),
     enabled: !!projectQuery.data,
   })
   const pagesQuery = useQuery({
@@ -177,7 +184,11 @@ export function ProjectView() {
               {currentActivity.materials && (
                 <div className="card" style={{ marginTop: 12 }}>
                   <h2>Materiali</h2>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{currentActivity.materials}</p>
+                  <MaterialsTable
+                    value={currentActivity.materials}
+                    people={peopleQuery.data ?? []}
+                    groups={groupsQuery.data ?? []}
+                  />
                 </div>
               )}
             </div>

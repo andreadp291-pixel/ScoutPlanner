@@ -9,6 +9,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getActivity, updateActivity } from '../api/activities'
 import { listGroups } from '../api/groups'
+import { listPeople } from '../api/people'
+import { MaterialsTable } from '../components/MaterialsTable'
 import { getProject, getProjectAccess } from '../api/projects'
 import { dateRange, formatShortDate } from '../components/calendar/time'
 import { BlockEditor } from '../components/editor/BlockEditor'
@@ -36,6 +38,7 @@ export function ActivityDescription() {
   })
   const projectQuery = useQuery({ queryKey: ['project', id], queryFn: () => getProject(id) })
   const groupsQuery = useQuery({ queryKey: ['groups', id], queryFn: () => listGroups(id) })
+  const peopleQuery = useQuery({ queryKey: ['people', id], queryFn: () => listPeople(id) })
 
   const dirty = pendingContent !== null || materials !== null
   const { base, setBase, conflict } = useEditBase(activityQuery.data?.updated_at, dirty)
@@ -127,18 +130,15 @@ export function ActivityDescription() {
         presetGroups={groupsQuery.data ?? []}
       />
 
-      <form onSubmit={(e) => e.preventDefault()} style={{ marginTop: 20 }}>
-        <label>
-          Materiali
-          <textarea
-            rows={3}
-            placeholder="Es. corda, torcia, cerini…"
-            value={currentMaterials}
-            disabled={!canEdit}
-            onChange={(e) => setMaterials(e.target.value)}
-          />
-        </label>
-      </form>
+      <section style={{ marginTop: 20 }}>
+        <h2>Materiali</h2>
+        <MaterialsTable
+          value={currentMaterials}
+          people={peopleQuery.data ?? []}
+          groups={groupsQuery.data ?? []}
+          onChange={canEdit ? setMaterials : undefined}
+        />
+      </section>
 
       {canEdit && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16 }}>

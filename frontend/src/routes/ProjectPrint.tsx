@@ -8,6 +8,8 @@ import { dateRange, formatDayLabel } from '../components/calendar/time'
 import { BlockEditor } from '../components/editor/BlockEditor'
 import { isDocEmpty, parseActivityDoc } from '../components/editor/blocks'
 import { NoAccess } from '../components/NoAccess'
+import { MaterialsTable } from '../components/MaterialsTable'
+import { parseMaterials } from '../lib/materials'
 import { Spinner } from '../components/Spinner'
 
 // Vademecum da stampare: una pagina per giorno. «Salva come PDF» dal dialogo di stampa del browser.
@@ -55,7 +57,9 @@ export function ProjectPrint() {
                   </h2>
                   {meta.length > 0 && <p className="muted">{meta.join(' · ')}</p>}
                   {!isDocEmpty(doc) && <BlockEditor projectId={id} content={doc} editable={false} />}
-                  {a.materials && <p><strong>Materiali:</strong> {a.materials}</p>}
+                  {parseMaterials(a.materials).some((m) => m.cosa.trim()) && (
+                    <MaterialsTable value={a.materials} people={peopleQuery.data ?? []} groups={groupsQuery.data ?? []} />
+                  )}
                 </article>
               )
             })}

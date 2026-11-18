@@ -11,8 +11,12 @@ router = APIRouter(prefix="/projects/{project_id}/materials", tags=["materials"]
 
 
 def _items(text: str) -> list[str]:
-    # Le voci si scrivono una per riga o separate da virgola / punto e virgola.
-    return [p.strip() for p in re.split(r"[\n,;]+", text) if p.strip()]
+    # Riga «cosa<TAB>chi» dalla tabella dell'attività; altrimenti vecchio testo libero separato da , o ;
+    out = []
+    for line in text.split("\n"):
+        parts = [line.split("\t")[0]] if "\t" in line else re.split(r"[,;]+", line)
+        out += [p.strip() for p in parts if p.strip()]
+    return out
 
 
 @router.get("", response_model=list[MaterialOut])
