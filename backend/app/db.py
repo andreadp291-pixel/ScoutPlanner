@@ -232,8 +232,8 @@ MIGRATIONS = [
     "ALTER TABLE activity_log ADD COLUMN for_ref TEXT",  # se c'è, la voce è solo per quella persona (es. assegnazione)
     "ALTER TABLE activities ADD COLUMN deleted_at TEXT",  # cestino
     "ALTER TABLE project_pages ADD COLUMN deleted_at TEXT",
-    "ALTER TABLE groups ADD COLUMN color TEXT",
-    "ALTER TABLE owners ADD COLUMN display_name TEXT",  # nome scelto nel profilo; NULL = si mostra l'email  # '#rrggbb'; NULL = colore automatico dalla tavolozza
+    "ALTER TABLE groups ADD COLUMN color TEXT",  # '#rrggbb'; NULL = colore automatico dalla tavolozza
+    "ALTER TABLE owners ADD COLUMN display_name TEXT",  # nome scelto nel profilo; NULL = si mostra l'email
 ]
 
 

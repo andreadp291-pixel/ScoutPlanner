@@ -9,10 +9,8 @@ import type { Block } from './blocks'
 type LatLon = [number, number]
 type Bounds = [LatLon, LatLon]
 
-const CHART_W = 600
 const CHART_H = 170
 const MARGIN = { top: 10, right: 10, bottom: 20, left: 38 }
-const INNER_W = CHART_W - MARGIN.left - MARGIN.right
 const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom
 
 // Punto più vicino a un dato km in un array ordinato per km crescente
@@ -37,6 +35,19 @@ function ElevationChart({
   scrubKm: number
   onScrubKmChange: (km: number) => void
 }) {
+  // Si disegna alla larghezza reale del riquadro: con un viewBox fisso stirato, testi e pallino si deformano.
+  const hasChart = profile.length >= 2
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [chartW, setChartW] = useState(600)
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setChartW(Math.max(el.clientWidth, 200)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [hasChart]) // il riquadro esiste solo quando c'è un profilo
+  const CHART_W = chartW
+  const INNER_W = CHART_W - MARGIN.left - MARGIN.right
   const maxKm = profile.length ? profile[profile.length - 1].km || 1 : 1
   const eles = profile.map((p) => p.ele)
   const minEle = profile.length ? Math.min(...eles) : 0
@@ -69,8 +80,8 @@ function ElevationChart({
   const dotY = toY(current.ele)
 
   return (
-    <div className="gpx-elevation">
-      <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="gpx-elevation-chart" preserveAspectRatio="none">
+    <div className="gpx-elevation" ref={wrapRef}>
+      <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="gpx-elevation-chart">
         <defs>
           <linearGradient id="gpxAreaFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" className="gpx-elevation-gradient-start" />
@@ -350,7 +361,13 @@ export function GpxBlockBody({
       <input ref={inputRef} type="file" accept=".gpx" onChange={handleFile} style={{ display: 'none' }} />
       <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}>
         <CompassIcon size={14} /> {uploading ? 'Caricamento…' : block.url ? 'Sostituisci traccia' : 'Carica file GPX'}
-      </button>
+      </button>{' '}
+      <a href="https://gpx.studio/app" target="_blank" rel="noopener noreferrer" className="btn">
+        Disegna su gpx.studio ↗
+      </a>
+      <p className="muted" style={{ marginTop: 6 }}>
+        Su gpx.studio disegna il percorso, poi «Esporta» il file GPX e caricalo qui.
+      </p>
     </div>
   )
 }

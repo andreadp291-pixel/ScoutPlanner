@@ -33,6 +33,7 @@ from .routers import (
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
+    materials.migrate_procure_to_activities()
     history.purge_trash()
     # i promemoria automatici partono solo dove le email sono davvero configurate
     task = asyncio.create_task(notify.report_loop()) if SMTP_USER and SMTP_PASSWORD else None

@@ -121,7 +121,9 @@ def test_assignees_and_materials(client, project):
 
     r = client.put(f"/projects/{project}/materials", json={"name": "Corda", "procure_ref": refs["Silvia"], "transport_ref": "o"}, headers=h)
     assert r.status_code == 200
-    assert client.get(f"/projects/{project}/materials", headers=h).json()[0]["procure_ref"] == refs["Silvia"]
+    corda = client.get(f"/projects/{project}/materials", headers=h).json()[0]
+    assert corda["transport_ref"] == "o" and corda["activities"][0]["chi"] == refs["Silvia"]  # «chi lo procura» va nell'attività
+    assert client.get(f"{url}/{a['id']}", headers=h).json()["materials"] == f"Corda\t{refs['Silvia']}\ntorcia\t\ncorda\t{refs['Silvia']}"
     assert client.put(f"/projects/{project}/materials", json={"name": "Corda", "procure_ref": "m999"}, headers=h).status_code == 400
 
     # formato tabella «cosa<TAB>chi»: la virgola resta nel nome, chi e righe vuote non finiscono nella lista
@@ -129,6 +131,24 @@ def test_assignees_and_materials(client, project):
     mats = client.get(f"/projects/{project}/materials", headers=h).json()
     assert [m["key"] for m in mats] == ["corda", "telo, grande", "torcia"]
     assert {x["id"]: x["chi"] for x in mats[2]["activities"]} == {a["id"]: None, b["id"]: "g1"}
+
+    # «chi» di una sola attività dalla lista generale
+    chi_url = f"/projects/{project}/materials/chi"
+    assert client.put(chi_url, json={"activity_id": a["id"], "name": "TORCIA", "chi": "o"}, headers=h).status_code == 204
+    assert {x["id"]: x["chi"] for x in client.get(f"/projects/{project}/materials", headers=h).json()[2]["activities"]} == {a["id"]: "o", b["id"]: "g1"}
+    assert client.put(chi_url, json={"activity_id": a["id"], "name": "torcia", "chi": "g999"}, headers=h).status_code == 400
+    assert client.put(chi_url, json={"activity_id": 99999, "name": "torcia", "chi": None}, headers=h).status_code == 404
+
+    # migrazione: un vecchio «chi lo procura» rimasto in tabella finisce nelle attività dove il chi è vuoto
+    from app.db import get_conn
+    from app.routers.materials import migrate_procure_to_activities
+    with get_conn() as conn:
+        conn.execute("INSERT INTO material_assignments (project_id, name_key, procure_ref) VALUES (?, 'corda', 'o') ON CONFLICT DO UPDATE SET procure_ref = 'o'", (project,))
+    migrate_procure_to_activities()
+    corda = client.get(f"/projects/{project}/materials", headers=h).json()[0]
+    assert corda["activities"][0]["chi"] == refs["Silvia"]  # già assegnato: non si tocca
+    with get_conn() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM material_assignments WHERE procure_ref IS NOT NULL").fetchone()[0] == 0
 
     # chi ha il link è riconosciuto: access restituisce il suo ref
     me = client.get(f"/projects/{project}/access", headers={"Authorization": f"Bearer {link['raw_token']}"}).json()

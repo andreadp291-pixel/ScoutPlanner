@@ -2,9 +2,9 @@ import { canEditRole } from '../lib/roles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { assignMaterial, listMaterials, type Material } from '../api/materials'
+import { assignMaterial, listMaterials, setMaterialChi, type Material } from '../api/materials'
 import { listPeople, type Person } from '../api/people'
-import { listGroups } from '../api/groups'
+import { listGroups, type Group } from '../api/groups'
 import { getProjectAccess } from '../api/projects'
 import { ArrowLeftIcon } from '../components/icons/ArrowLeftIcon'
 import { Spinner } from '../components/Spinner'
@@ -12,29 +12,45 @@ import { Spinner } from '../components/Spinner'
 function PersonSelect({
   value,
   people,
+  groups = [],
   disabled,
+  label,
   onChange,
 }: {
   value: string | null
   people: Person[]
+  groups?: Group[]
   disabled: boolean
+  label: string
   onChange: (ref: string | null) => void
 }) {
+  const known = people.some((p) => p.ref === value) || groups.some((g) => `g${g.id}` === value)
   return (
-    <select value={value ?? ''} disabled={disabled} onChange={(e) => onChange(e.target.value || null)}>
+    <select aria-label={label} value={value ?? ''} disabled={disabled} onChange={(e) => onChange(e.target.value || null)}>
       <option value="">—</option>
-      {value && !people.some((p) => p.ref === value) && <option value={value}>(rimosso)</option>}
-      {people.map((p) => (
-        <option key={p.ref} value={p.ref}>
-          {p.name}
-        </option>
-      ))}
+      {value && !known && <option value={value}>(rimosso)</option>}
+      <optgroup label="Persone">
+        {people.map((p) => (
+          <option key={p.ref} value={p.ref}>
+            {p.name}
+          </option>
+        ))}
+      </optgroup>
+      {groups.length > 0 && (
+        <optgroup label="Gruppi">
+          {groups.map((g) => (
+            <option key={g.id} value={`g${g.id}`}>
+              {g.name}
+            </option>
+          ))}
+        </optgroup>
+      )}
     </select>
   )
 }
 
 // Lista unica dei materiali: le voci arrivano dal campo "Materiali" di ogni attività
-// (una per riga o separate da virgola); qui si decide chi le procura e chi le trasporta.
+// (tabella Cosa / Chi). Il «chi» è per attività e si cambia anche da qui; chi trasporta è per materiale.
 export function ProjectMaterials() {
   const { projectId } = useParams()
   const id = Number(projectId)
@@ -48,8 +64,17 @@ export function ProjectMaterials() {
 
   const assignMutation = useMutation({
     mutationFn: (m: Material) =>
-      assignMaterial(id, { name: m.name, procure_ref: m.procure_ref, transport_ref: m.transport_ref }),
+      assignMaterial(id, { name: m.name, transport_ref: m.transport_ref }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['materials', id] }),
+    onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
+  })
+  const chiMutation = useMutation({
+    mutationFn: (input: { activity_id: number; name: string; chi: string | null }) => setMaterialChi(id, input),
+    onSuccess: (_, input) => {
+      queryClient.invalidateQueries({ queryKey: ['materials', id] })
+      queryClient.invalidateQueries({ queryKey: ['activity', id, input.activity_id] })
+      queryClient.invalidateQueries({ queryKey: ['activities', id] })
+    },
     onError: (err) => alert(err instanceof Error ? err.message : 'Errore durante il salvataggio'),
   })
 
@@ -63,13 +88,10 @@ export function ProjectMaterials() {
     (m) =>
       !onlyMine ||
       (myRef !== undefined &&
-        (m.procure_ref === myRef || m.transport_ref === myRef || m.activities.some((a) => a.chi === myRef))),
+        (m.transport_ref === myRef || m.activities.some((a) => a.chi === myRef))),
   )
-  const names = new Map<string, string>([
-    ...people.map((p) => [p.ref, p.name] as [string, string]),
-    ...(groupsQuery.data ?? []).map((g) => [`g${g.id}`, g.name] as [string, string]),
-  ])
-  const chiLabel = (ref: string) => names.get(ref) ?? '(rimosso)'
+  const groups = groupsQuery.data ?? []
+  const busy = !canEdit || assignMutation.isPending || chiMutation.isPending
 
   return (
     <div>
@@ -92,29 +114,35 @@ export function ProjectMaterials() {
       {materials.map((m) => (
         <div key={m.key} className="card" style={{ marginBottom: 8 }}>
           <strong>{m.name}</strong>
-          <p className="muted" style={{ margin: '2px 0 8px' }}>
-            {m.activities.map((a) => (a.chi ? `${a.title} (${chiLabel(a.chi)})` : a.title)).join(' · ')}
-          </p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <label>
-              Chi lo procura
-              <PersonSelect
-                value={m.procure_ref}
-                people={people}
-                disabled={!canEdit || assignMutation.isPending}
-                onChange={(ref) => assignMutation.mutate({ ...m, procure_ref: ref })}
-              />
-            </label>
-            <label>
-              Chi lo trasporta
-              <PersonSelect
-                value={m.transport_ref}
-                people={people}
-                disabled={!canEdit || assignMutation.isPending}
-                onChange={(ref) => assignMutation.mutate({ ...m, transport_ref: ref })}
-              />
-            </label>
-          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '6px 0 8px', display: 'grid', gap: 6 }}>
+            {m.activities
+              .filter((a) => !onlyMine || m.transport_ref === myRef || a.chi === myRef)
+              .map((a) => (
+                <li key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Link to={`/projects/${id}/activities/${a.id}/description`} style={{ flex: '1 1 160px' }}>
+                    {a.title}
+                  </Link>
+                  <PersonSelect
+                    label={`Chi per ${a.title}`}
+                    value={a.chi}
+                    people={people}
+                    groups={groups}
+                    disabled={busy}
+                    onChange={(chi) => chiMutation.mutate({ activity_id: a.id, name: m.name, chi })}
+                  />
+                </li>
+              ))}
+          </ul>
+          <label>
+            Chi lo trasporta
+            <PersonSelect
+              label="Chi lo trasporta"
+              value={m.transport_ref}
+              people={people}
+              disabled={busy}
+              onChange={(ref) => assignMutation.mutate({ ...m, transport_ref: ref })}
+            />
+          </label>
         </div>
       ))}
     </div>

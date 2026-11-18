@@ -331,8 +331,13 @@ class MaterialOut(BaseModel):
     key: str
     name: str
     activities: list[MaterialActivityOut]
-    procure_ref: str | None = None
     transport_ref: str | None = None
+
+
+class MaterialChiIn(BaseModel):
+    activity_id: int
+    name: str = Field(min_length=1, max_length=200)
+    chi: str | None = None
 
 
 class MaterialAssignIn(BaseModel):
